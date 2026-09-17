@@ -1,5 +1,6 @@
 import { contract, xdr } from '@stellar/stellar-sdk';
 import { ApiError } from '../errors.js';
+import type { ContractModel } from '../types.js';
 
 type TypeDef = { type: string; value: any };
 const HEX = /^0x([0-9a-fA-F]{2})*$/;
@@ -113,4 +114,16 @@ export function decodeResult(spec: contract.Spec, fn: string, retval: xdr.ScVal)
 export function contractErrorName(spec: contract.Spec, code: number): string | null {
   const c = (spec.errorCases() as unknown as Array<{ name: unknown; value: number }>).find((x) => Number(x.value) === code);
   return c ? String(c.name) : null;
+}
+
+/** Rethrows `e`; if it is a `contract_error` ApiError whose code the spec names, rethrows it renamed (error = spec name, message = the error's doc or the original message). */
+export function namedContractError(e: unknown, model: ContractModel, spec: contract.Spec): never {
+  if (e instanceof ApiError && e.error === 'contract_error' && e.extra.code !== undefined) {
+    const name = contractErrorName(spec, e.extra.code);
+    if (name) {
+      const doc = model.errors.find((x) => x.code === e.extra.code)?.doc;
+      throw new ApiError(422, name, doc || e.message, { code: e.extra.code, details: e.extra.details });
+    }
+  }
+  throw e;
 }
