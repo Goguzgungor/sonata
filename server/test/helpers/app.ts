@@ -8,8 +8,8 @@ import { openapi } from '../../src/docs/openapi.js';
 import { FakeChain } from './fakeChain.js';
 import { FIXTURE_ID } from '../fixtures/index.js';
 
-export async function testApp() {
-  const cfg = loadConfig({ DATABASE_URL: 'postgres://unused', PUBLIC_BASE_URL: 'https://api.sonata.test', RPC_URL_MAINNET: 'https://mainnet.example' });
+export async function testApp(envOverrides: NodeJS.ProcessEnv = {}) {
+  const cfg = loadConfig({ DATABASE_URL: 'postgres://unused', PUBLIC_BASE_URL: 'https://api.sonata.test', RPC_URL_MAINNET: 'https://mainnet.example', ...envOverrides });
   const chain = new FakeChain();
   const store = new MemoryStore();
   const registry = new Registry({ store, chain, gen: { llmsTxt: (m) => llmsTxt(m, cfg), openapi: (m) => openapi(m, cfg) } });

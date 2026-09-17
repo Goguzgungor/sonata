@@ -34,9 +34,28 @@ describe('contracts routes', () => {
     const bad = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { mcp_scope: 'admin' } });
     expect(bad.statusCode).toBe(400);
   });
+  it('POST /contracts is 400 network_not_configured when the network has no RPC configured', async () => {
+    const { app } = await testApp({ RPC_URL_MAINNET: undefined });
+    const res = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'mainnet' } });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe('network_not_configured');
+  });
+  it('GET /nope is 404 route_not_found', async () => {
+    const { app } = await testApp();
+    const res = await app.inject({ method: 'GET', url: '/nope' });
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error).toBe('route_not_found');
+  });
   it('GET /healthz reports db and networks', async () => {
     const { app } = await testApp();
     const h = await app.inject({ method: 'GET', url: '/healthz' });
     expect(h.json()).toEqual({ db: 'ok', networks: { testnet: 'ok', mainnet: 'ok' } });
+  });
+  it('GET /healthz is 503 when a network is degraded', async () => {
+    const { app, chain } = await testApp();
+    chain.impl.health = async () => 'error';
+    const h = await app.inject({ method: 'GET', url: '/healthz' });
+    expect(h.statusCode).toBe(503);
+    expect(h.json()).toEqual({ db: 'ok', networks: { testnet: 'error', mainnet: 'error' } });
   });
 });

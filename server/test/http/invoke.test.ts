@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { xdr, nativeToScVal } from '@stellar/stellar-sdk';
 import { testApp } from '../helpers/app.js';
-import { FIXTURE_ID } from '../fixtures/index.js';
+import { FIXTURE_ID, loadFixtureWasm } from '../fixtures/index.js';
 import { ChainError } from '../../src/chain/errors.js';
 
 const G = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
@@ -25,7 +25,7 @@ describe('POST /call', () => {
     expect(res.json()).toMatchObject({ result: null, auth: [G] });
     expect(await store.getHints(FIXTURE_ID)).toEqual({ ping: 'write' });
   });
-  it('400 invalid_args with a path; 404 unknown fn; 409 not ready; 400 network mismatch', async () => {
+  it('400 invalid_args with a path; 404 unregistered contract and unknown fn; 400 network mismatch', async () => {
     const { app, registerFixture, registry } = await testApp();
     expect((await call(app, 'add', { args: {} })).statusCode).toBe(404);
     await registerFixture();
@@ -34,6 +34,16 @@ describe('POST /call', () => {
     expect((await call(app, 'nope', { args: {} })).json()).toMatchObject({ error: 'function_not_found' });
     expect((await call(app, 'add', { args: { a: '1', b: '1' }, network: 'mainnet' })).json()).toMatchObject({ error: 'network_mismatch' });
     expect((await call(app, 'add', { a: '1' })).statusCode).toBe(400);
+  });
+  it('409 contract_not_ready while the registration pipeline is still running', async () => {
+    const { app, chain, registry } = await testApp();
+    chain.impl.getContractWasm = () => new Promise((resolve) => setTimeout(() => resolve(loadFixtureWasm()), 300));
+    await registry.register(FIXTURE_ID, 'testnet', 'KitchenSink');
+    const res = await call(app, 'add', { args: { a: '1', b: '1' } });
+    expect(res.statusCode).toBe(409);
+    expect(res.json()).toMatchObject({ error: 'contract_not_ready' });
+    expect(res.json().details).toHaveProperty('steps');
+    await registry.whenIdle();
   });
   it('maps contract errors to spec names', async () => {
     const { app, chain, registerFixture } = await testApp(); await registerFixture();
