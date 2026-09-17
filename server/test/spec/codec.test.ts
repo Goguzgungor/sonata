@@ -48,4 +48,8 @@ describe('errors', () => {
     expect(contractErrorName(spec, 1)).toBe('TooBig');
     expect(contractErrorName(spec, 9)).toBeNull();
   });
+  it('names the exact failing argument, not a guess', () => {
+    expect(() => encodeArgs(spec, 'add', { a: '1', b: 'x' })).toThrow(expect.objectContaining({ extra: { details: { path: 'b' } } }));
+    expect(() => encodeArgs(spec, 'add', { a: 'x', b: '1' })).toThrow(expect.objectContaining({ extra: { details: { path: 'a' } } }));
+  });
 });

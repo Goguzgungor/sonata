@@ -87,19 +87,18 @@ function shapeOutput(v: unknown, t: TypeDef, spec: contract.Spec): unknown {
 export function encodeArgs(spec: contract.Spec, fn: string, args: Record<string, unknown>): xdr.ScVal[] {
   const f = spec.getFunc(fn);
   const inputs = f.inputs as unknown as Array<{ name: unknown; type: TypeDef }>;
-  const prepared: Record<string, unknown> = {};
+  const out: xdr.ScVal[] = [];
   for (const i of inputs) {
     const name = String(i.name);
     if (!(name in args) && i.type.type !== 'scSpecTypeOption') throw new CodecError(`${name}: missing`, name);
-    prepared[name] = fromJson(args[name], i.type, name, spec);
+    const prepared = fromJson(args[name], i.type, name, spec);
+    try {
+      out.push(spec.nativeToScVal(prepared, i.type as unknown as xdr.ScSpecTypeDef));
+    } catch (e) {
+      throw new CodecError(`${name}: ${(e as Error).message}`, name);
+    }
   }
-  try {
-    return spec.funcArgsToScVals(fn, prepared);
-  } catch (e) {
-    const msg = (e as Error).message;
-    const named = inputs.map((i) => String(i.name)).find((n) => msg.includes(n)) ?? (inputs[0] && String(inputs[0].name));
-    throw new CodecError(`${named ?? 'args'}: ${msg}`, named ?? 'args');
-  }
+  return out;
 }
 
 export function decodeResult(spec: contract.Spec, fn: string, retval: xdr.ScVal): unknown {
