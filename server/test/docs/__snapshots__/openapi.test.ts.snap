@@ -24,39 +24,24 @@ exports[`openapi > is stable 1`] = `
         "type": "object",
       },
       "Level": {
-        "description": "A level.",
-        "oneOf": [
-          {
-            "description": "",
-            "enum": [
-              1,
-            ],
-            "title": "Low",
-            "type": "number",
-          },
-          {
-            "description": "",
-            "enum": [
-              2,
-            ],
-            "title": "High",
-            "type": "number",
-          },
+        "description": "Level: Low = 1, High = 2",
+        "enum": [
+          1,
+          2,
         ],
+        "type": "integer",
       },
       "Pair": {
         "additionalProperties": false,
         "description": "A pair of a number and an address.",
         "properties": {
           "a": {
-            "maxLength": 40,
-            "minLength": 1,
-            "pattern": "^(-?[1-9][0-9]*|0)$",
+            "description": "i128 as a decimal string",
+            "pattern": "^-?[0-9]+$",
             "type": "string",
           },
           "b": {
-            "description": "Address can be a public key or contract id",
-            "format": "address",
+            "description": "Stellar address (G… or C…)",
             "type": "string",
           },
         },
@@ -70,32 +55,25 @@ exports[`openapi > is stable 1`] = `
         "description": "A shape: either nothing or a boxed value.",
         "oneOf": [
           {
-            "additionalProperties": false,
-            "properties": {
-              "tag": "Unit",
-            },
-            "required": [
-              "tag",
-            ],
-            "title": "Unit",
-            "type": "object",
+            "const": "Unit",
           },
           {
             "additionalProperties": false,
             "properties": {
-              "tag": "Boxed",
+              "tag": {
+                "const": "Boxed",
+              },
               "values": {
                 "items": [
                   {
-                    "maximum": 4294967295,
-                    "minimum": 0,
                     "type": "integer",
                   },
                   {
-                    "description": "ScSymbol is a string",
                     "type": "string",
                   },
                 ],
+                "maxItems": 2,
+                "minItems": 2,
                 "type": "array",
               },
             },
@@ -103,7 +81,6 @@ exports[`openapi > is stable 1`] = `
               "tag",
               "values",
             ],
-            "title": "Boxed",
             "type": "object",
           },
         ],
@@ -162,15 +139,13 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "a": {
-                        "maxLength": 40,
-                        "minLength": 1,
-                        "pattern": "^(-?[1-9][0-9]*|0)$",
+                        "description": "i128 as a decimal string",
+                        "pattern": "^-?[0-9]+$",
                         "type": "string",
                       },
                       "b": {
-                        "maxLength": 40,
-                        "minLength": 1,
-                        "pattern": "^(-?[1-9][0-9]*|0)$",
+                        "description": "i128 as a decimal string",
+                        "pattern": "^-?[0-9]+$",
                         "type": "string",
                       },
                     },
@@ -423,8 +398,6 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "n": {
-                        "maximum": 4294967295,
-                        "minimum": 0,
                         "type": "integer",
                       },
                     },
@@ -554,7 +527,8 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "b": {
-                        "pattern": "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=)?$",
+                        "description": "Bytes as 0x-prefixed hex",
+                        "pattern": "^0x([0-9a-fA-F]{2})*$",
                         "type": "string",
                       },
                     },
@@ -684,8 +658,10 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "h": {
-                        "maxLength": 32,
-                        "pattern": "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=)?$",
+                        "description": "BytesN<32> as 0x-prefixed hex",
+                        "maxLength": 66,
+                        "minLength": 66,
+                        "pattern": "^0x[0-9a-fA-F]{64}$",
                         "type": "string",
                       },
                     },
@@ -815,25 +791,12 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "l": {
-                        "description": "A level.",
-                        "oneOf": [
-                          {
-                            "description": "",
-                            "enum": [
-                              1,
-                            ],
-                            "title": "Low",
-                            "type": "number",
-                          },
-                          {
-                            "description": "",
-                            "enum": [
-                              2,
-                            ],
-                            "title": "High",
-                            "type": "number",
-                          },
+                        "description": "Level: Low = 1, High = 2",
+                        "enum": [
+                          1,
+                          2,
                         ],
+                        "type": "integer",
                       },
                     },
                     "required": [
@@ -962,24 +925,13 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "m": {
-                        "items": {
-                          "items": [
-                            {
-                              "description": "ScSymbol is a string",
-                              "type": "string",
-                            },
-                            {
-                              "maxLength": 40,
-                              "minLength": 1,
-                              "pattern": "^(-?[1-9][0-9]*|0)$",
-                              "type": "string",
-                            },
-                          ],
-                          "maxItems": 2,
-                          "minItems": 2,
-                          "type": "array",
+                        "additionalProperties": {
+                          "description": "i128 as a decimal string",
+                          "pattern": "^-?[0-9]+$",
+                          "type": "string",
                         },
-                        "type": "array",
+                        "description": "Map<Symbol, i128> as an object keyed by Symbol",
+                        "type": "object",
                       },
                     },
                     "required": [
@@ -1112,14 +1064,12 @@ exports[`openapi > is stable 1`] = `
                         "description": "A pair of a number and an address.",
                         "properties": {
                           "a": {
-                            "maxLength": 40,
-                            "minLength": 1,
-                            "pattern": "^(-?[1-9][0-9]*|0)$",
+                            "description": "i128 as a decimal string",
+                            "pattern": "^-?[0-9]+$",
                             "type": "string",
                           },
                           "b": {
-                            "description": "Address can be a public key or contract id",
-                            "format": "address",
+                            "description": "Stellar address (G… or C…)",
                             "type": "string",
                           },
                         },
@@ -1259,32 +1209,25 @@ exports[`openapi > is stable 1`] = `
                         "description": "A shape: either nothing or a boxed value.",
                         "oneOf": [
                           {
-                            "additionalProperties": false,
-                            "properties": {
-                              "tag": "Unit",
-                            },
-                            "required": [
-                              "tag",
-                            ],
-                            "title": "Unit",
-                            "type": "object",
+                            "const": "Unit",
                           },
                           {
                             "additionalProperties": false,
                             "properties": {
-                              "tag": "Boxed",
+                              "tag": {
+                                "const": "Boxed",
+                              },
                               "values": {
                                 "items": [
                                   {
-                                    "maximum": 4294967295,
-                                    "minimum": 0,
                                     "type": "integer",
                                   },
                                   {
-                                    "description": "ScSymbol is a string",
                                     "type": "string",
                                   },
                                 ],
+                                "maxItems": 2,
+                                "minItems": 2,
                                 "type": "array",
                               },
                             },
@@ -1292,7 +1235,6 @@ exports[`openapi > is stable 1`] = `
                               "tag",
                               "values",
                             ],
-                            "title": "Boxed",
                             "type": "object",
                           },
                         ],
@@ -1547,8 +1489,7 @@ exports[`openapi > is stable 1`] = `
                     "properties": {
                       "v": {
                         "items": {
-                          "description": "Address can be a public key or contract id",
-                          "format": "address",
+                          "description": "Stellar address (G… or C…)",
                           "type": "string",
                         },
                         "type": "array",
@@ -1680,10 +1621,16 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "v": {
-                        "maxLength": 20,
-                        "minLength": 1,
-                        "pattern": "^([1-9][0-9]*|0)$",
-                        "type": "string",
+                        "anyOf": [
+                          {
+                            "description": "u64 as a decimal string",
+                            "pattern": "^[0-9]+$",
+                            "type": "string",
+                          },
+                          {
+                            "type": "null",
+                          },
+                        ],
                       },
                     },
                     "type": "object",
@@ -1809,13 +1756,10 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "n": {
-                        "maximum": 4294967295,
-                        "minimum": 0,
                         "type": "integer",
                       },
                       "who": {
-                        "description": "Address can be a public key or contract id",
-                        "format": "address",
+                        "description": "Stellar address (G… or C…)",
                         "type": "string",
                       },
                     },
@@ -1946,7 +1890,6 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "s": {
-                        "description": "ScString is a string",
                         "type": "string",
                       },
                     },
@@ -2078,8 +2021,6 @@ exports[`openapi > is stable 1`] = `
                       "t": {
                         "items": [
                           {
-                            "maximum": 4294967295,
-                            "minimum": 0,
                             "type": "integer",
                           },
                           {
@@ -2368,15 +2309,13 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "a": {
-                        "maxLength": 40,
-                        "minLength": 1,
-                        "pattern": "^(-?[1-9][0-9]*|0)$",
+                        "description": "i128 as a decimal string",
+                        "pattern": "^-?[0-9]+$",
                         "type": "string",
                       },
                       "b": {
-                        "maxLength": 40,
-                        "minLength": 1,
-                        "pattern": "^(-?[1-9][0-9]*|0)$",
+                        "description": "i128 as a decimal string",
+                        "pattern": "^-?[0-9]+$",
                         "type": "string",
                       },
                     },
@@ -2387,6 +2326,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -2517,6 +2457,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -2645,8 +2586,6 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "n": {
-                        "maximum": 4294967295,
-                        "minimum": 0,
                         "type": "integer",
                       },
                     },
@@ -2656,6 +2595,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -2784,7 +2724,8 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "b": {
-                        "pattern": "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=)?$",
+                        "description": "Bytes as 0x-prefixed hex",
+                        "pattern": "^0x([0-9a-fA-F]{2})*$",
                         "type": "string",
                       },
                     },
@@ -2794,6 +2735,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -2922,8 +2864,10 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "h": {
-                        "maxLength": 32,
-                        "pattern": "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=)?$",
+                        "description": "BytesN<32> as 0x-prefixed hex",
+                        "maxLength": 66,
+                        "minLength": 66,
+                        "pattern": "^0x[0-9a-fA-F]{64}$",
                         "type": "string",
                       },
                     },
@@ -2933,6 +2877,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -3061,25 +3006,12 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "l": {
-                        "description": "A level.",
-                        "oneOf": [
-                          {
-                            "description": "",
-                            "enum": [
-                              1,
-                            ],
-                            "title": "Low",
-                            "type": "number",
-                          },
-                          {
-                            "description": "",
-                            "enum": [
-                              2,
-                            ],
-                            "title": "High",
-                            "type": "number",
-                          },
+                        "description": "Level: Low = 1, High = 2",
+                        "enum": [
+                          1,
+                          2,
                         ],
+                        "type": "integer",
                       },
                     },
                     "required": [
@@ -3088,6 +3020,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -3216,24 +3149,13 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "m": {
-                        "items": {
-                          "items": [
-                            {
-                              "description": "ScSymbol is a string",
-                              "type": "string",
-                            },
-                            {
-                              "maxLength": 40,
-                              "minLength": 1,
-                              "pattern": "^(-?[1-9][0-9]*|0)$",
-                              "type": "string",
-                            },
-                          ],
-                          "maxItems": 2,
-                          "minItems": 2,
-                          "type": "array",
+                        "additionalProperties": {
+                          "description": "i128 as a decimal string",
+                          "pattern": "^-?[0-9]+$",
+                          "type": "string",
                         },
-                        "type": "array",
+                        "description": "Map<Symbol, i128> as an object keyed by Symbol",
+                        "type": "object",
                       },
                     },
                     "required": [
@@ -3242,6 +3164,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -3374,14 +3297,12 @@ exports[`openapi > is stable 1`] = `
                         "description": "A pair of a number and an address.",
                         "properties": {
                           "a": {
-                            "maxLength": 40,
-                            "minLength": 1,
-                            "pattern": "^(-?[1-9][0-9]*|0)$",
+                            "description": "i128 as a decimal string",
+                            "pattern": "^-?[0-9]+$",
                             "type": "string",
                           },
                           "b": {
-                            "description": "Address can be a public key or contract id",
-                            "format": "address",
+                            "description": "Stellar address (G… or C…)",
                             "type": "string",
                           },
                         },
@@ -3398,6 +3319,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -3529,32 +3451,25 @@ exports[`openapi > is stable 1`] = `
                         "description": "A shape: either nothing or a boxed value.",
                         "oneOf": [
                           {
-                            "additionalProperties": false,
-                            "properties": {
-                              "tag": "Unit",
-                            },
-                            "required": [
-                              "tag",
-                            ],
-                            "title": "Unit",
-                            "type": "object",
+                            "const": "Unit",
                           },
                           {
                             "additionalProperties": false,
                             "properties": {
-                              "tag": "Boxed",
+                              "tag": {
+                                "const": "Boxed",
+                              },
                               "values": {
                                 "items": [
                                   {
-                                    "maximum": 4294967295,
-                                    "minimum": 0,
                                     "type": "integer",
                                   },
                                   {
-                                    "description": "ScSymbol is a string",
                                     "type": "string",
                                   },
                                 ],
+                                "maxItems": 2,
+                                "minItems": 2,
                                 "type": "array",
                               },
                             },
@@ -3562,7 +3477,6 @@ exports[`openapi > is stable 1`] = `
                               "tag",
                               "values",
                             ],
-                            "title": "Boxed",
                             "type": "object",
                           },
                         ],
@@ -3574,6 +3488,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -3704,6 +3619,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -3833,8 +3749,7 @@ exports[`openapi > is stable 1`] = `
                     "properties": {
                       "v": {
                         "items": {
-                          "description": "Address can be a public key or contract id",
-                          "format": "address",
+                          "description": "Stellar address (G… or C…)",
                           "type": "string",
                         },
                         "type": "array",
@@ -3846,6 +3761,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -3974,15 +3890,22 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "v": {
-                        "maxLength": 20,
-                        "minLength": 1,
-                        "pattern": "^([1-9][0-9]*|0)$",
-                        "type": "string",
+                        "anyOf": [
+                          {
+                            "description": "u64 as a decimal string",
+                            "pattern": "^[0-9]+$",
+                            "type": "string",
+                          },
+                          {
+                            "type": "null",
+                          },
+                        ],
                       },
                     },
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -4111,13 +4034,10 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "n": {
-                        "maximum": 4294967295,
-                        "minimum": 0,
                         "type": "integer",
                       },
                       "who": {
-                        "description": "Address can be a public key or contract id",
-                        "format": "address",
+                        "description": "Stellar address (G… or C…)",
                         "type": "string",
                       },
                     },
@@ -4128,6 +4048,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -4256,7 +4177,6 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "s": {
-                        "description": "ScString is a string",
                         "type": "string",
                       },
                     },
@@ -4266,6 +4186,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
@@ -4396,8 +4317,6 @@ exports[`openapi > is stable 1`] = `
                       "t": {
                         "items": [
                           {
-                            "maximum": 4294967295,
-                            "minimum": 0,
                             "type": "integer",
                           },
                           {
@@ -4415,6 +4334,7 @@ exports[`openapi > is stable 1`] = `
                     "type": "object",
                   },
                   "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
                     "type": "string",
                   },
                   "network": {
