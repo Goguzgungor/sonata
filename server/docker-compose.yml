@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: sonata, POSTGRES_PASSWORD: sonata, POSTGRES_DB: sonata }
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+  api:
+    build: .
+    depends_on: [db]
+    env_file: .env
+    environment: { DATABASE_URL: postgres://sonata:sonata@db:5432/sonata }
+    ports: ["8080:8080"]
+volumes: { pgdata: {} }
