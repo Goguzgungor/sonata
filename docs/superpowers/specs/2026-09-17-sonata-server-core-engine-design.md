@@ -271,3 +271,12 @@ Two pure functions in `docs/`, run at pipeline step 3 and stored on the contract
 ## 12. Follow-on milestones (not in this spec)
 
 M2 site wiring (`NEXT_PUBLIC_API_URL`; Register, Functions, MCP, Docs, Overview tabs onto the real endpoints) · M3 accounts + API keys + scopes · M4 history indexer (`/events`, `get_events`, stats, CSV/JSON) · M5 flows · M6 explorer.
+
+## 13. Amendments (2026-09-17, found while verifying SDK APIs for the plan)
+
+- **MCP SDK is v2** (`@modelcontextprotocol/server` / `node` / `client` 2.0), not the old `@modelcontextprotocol/sdk`. Tools are registered with `McpServer.registerTool` + `fromJsonSchema`; transport is `NodeStreamableHTTPServerTransport` from `@modelcontextprotocol/node`, one server + transport per request.
+- **§6.1 enum encoding:** C-style enums (`ScSpecUdtEnumV0`) are JSON numbers (the discriminant); unions are `"Name"` (void case) or `{ "tag": "Name", "values": [...] }`. This is what `Spec.nativeToScVal` accepts.
+- **§7 `outputSchema`:** the schema advertised per tool is the response envelope (`{result, simulated, latency_ms, ledger, auth}` / `{xdr, fee, auth, ledger, expires_at}`), not the contract return type, so SDK-side validation never rejects hex/decimal-string encodings.
+- **§5 `contracts.spec_xdr text[]`:** the raw SEP-48 entries (base64 XDR) are stored alongside `model` because `contract.Spec` — needed for arg encoding at call time — cannot be rebuilt from the JSON model.
+- **§5 `spec_ledger`:** left `0` in M1; `getContractWasmByContractId` returns no ledger. The ledger shown to users is the one in each simulation response.
+- **stellar-sdk 17 XDR** objects are plain-object style (`{ type, value }`, property access); the plan's code uses that style throughout.
