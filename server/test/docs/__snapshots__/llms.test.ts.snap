@@ -1,0 +1,72 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`llmsTxt > is stable 1`] = `
+"# KitchenSink
+
+Soroban contract · 15 functions · SEP-48 · testnet
+Contract ID: CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4
+
+## Endpoints
+
+Base: https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4
+POST https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/{fn}   simulate any function → { result, simulated: true, auth }
+POST https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/{fn}     build unsigned XDR → { xdr, fee, auth }
+POST https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/submit      relay a signed XDR → { hash, status }
+GET  https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/openapi.json
+MCP: https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/mcp (Streamable HTTP)
+
+Arguments are passed by name in \`args\`. Integers ≥ 64-bit are decimal strings, bytes are 0x-hex, maps are objects.
+
+\`\`\`
+curl -X POST "https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/add" -H "Content-Type: application/json" -d '{"args":{}}'
+\`\`\`
+
+## Functions
+
+add(a: i128, b: i128) → i128
+  Returns the sum of two i128 values.
+bump() → u32
+  Increments and returns a counter (write).
+list(v: Vec<Address>) → u32
+  Returns the length of the list.
+ping(who: Address, n: u32) → void
+  Requires \`who\` to authorize and emits Pinged.
+text(s: String) → String
+  Echoes a string.
+maybe(v: Option<u64>) → Option<u64>
+  Echoes an optional number.
+tuple(t: (u32, bool)) → (u32, bool)
+  Echoes a tuple.
+checked(n: u32) → Result<u32, Error>
+  Fails with TooBig when n > 100.
+echo_map(m: Map<Symbol, i128>) → Map<Symbol, i128>
+  Echoes a map.
+echo_hash(h: BytesN<32>) → BytesN<32>
+  Echoes a 32-byte hash.
+echo_pair(p: Pair) → Pair
+  Echoes a pair.
+get_count() → u32  [read]
+  Returns the counter (read).
+echo_bytes(b: Bytes) → Bytes
+  Echoes bytes.
+echo_level(l: Level) → Level
+  Echoes a level.
+echo_shape(s: Shape) → Shape
+  Echoes a shape.
+
+## Types
+
+Pair (struct) · A pair of a number and an address.
+Level (enum) · A level.
+Shape (union) · A shape: either nothing or a boxed value.
+
+## Errors
+
+1 TooBig · The number was too big.
+2 Forbidden · Not allowed.
+
+## Events
+
+Pinged(who: Address, n: u32) · Emitted by ping.
+"
+`;
