@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { contract } from '@stellar/stellar-sdk';
 import { loadFixtureWasm } from '../fixtures/index.js';
-import { inlineRefs, fnInputSchema } from '../../src/spec/schema.js';
+import { inlineRefs, fnInputSchema, udtSchema } from '../../src/spec/schema.js';
 
 const spec = contract.Spec.fromWasm(loadFixtureWasm());
 
@@ -37,5 +37,34 @@ describe('fnInputSchema', () => {
   });
   it('no-arg functions produce an empty object schema', () => {
     expect(fnInputSchema(spec, 'bump')).toEqual({ type: 'object', properties: {}, additionalProperties: false });
+  });
+});
+
+describe('udtSchema', () => {
+  it('is self-contained for a struct (Pair)', () => {
+    const s = udtSchema(spec, 'Pair') as any;
+    const json = JSON.stringify(s);
+    expect(json).not.toContain('$ref');
+    expect(json).not.toContain('"definitions"');
+    expect(s.properties.a).toBeDefined();
+    expect(s.properties.b).toBeDefined();
+  });
+  it('preserves oneOf for a union (Shape) without forcing type: object', () => {
+    const s = udtSchema(spec, 'Shape') as any;
+    const json = JSON.stringify(s);
+    expect(json).not.toContain('$ref');
+    expect(json).not.toContain('"definitions"');
+    expect(Array.isArray(s.oneOf)).toBe(true);
+  });
+  it('does not force type: object for an enum (Level)', () => {
+    const s = udtSchema(spec, 'Level') as any;
+    const json = JSON.stringify(s);
+    expect(json).not.toContain('$ref');
+    expect(json).not.toContain('"definitions"');
+    expect(Array.isArray(s.oneOf)).toBe(true);
+    expect(s.type).not.toBe('object');
+  });
+  it('returns an empty object for an unknown udt name (documents current behaviour)', () => {
+    expect(udtSchema(spec, 'DoesNotExist')).toEqual({});
   });
 });

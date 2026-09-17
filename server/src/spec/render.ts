@@ -9,9 +9,10 @@ const PRIM: Record<string, string> = {
   scSpecTypeAddress: 'Address', scSpecTypeMuxedAddress: 'MuxedAddress',
 };
 
-// stellar-sdk 17.1 XDR unions are plain objects, but (verified via node -e against the
-// kitchen-sink fixture) the payload lives under a property NAMED for the variant, not
-// under a generic `.value`: { type: 'scSpecTypeVec', vec: { elementType } },
+// stellar-sdk 17.1 XDR unions are plain objects (verified via node -e against the
+// kitchen-sink fixture). The SDK also exposes a `.value` prototype getter on these
+// objects, but here we read the arm-named own property directly instead, since that is
+// what Object.keys()/JSON.stringify() actually show: { type: 'scSpecTypeVec', vec: { elementType } },
 // { type: 'scSpecTypeOption', option: { valueType } }, { type: 'scSpecTypeBytesN', bytesN: { n } },
 // { type: 'scSpecTypeUdt', udt: { name } }, { type: 'scSpecTypeResult', result: { okType, errorType } }, etc.
 export function renderType(t: xdr.ScSpecTypeDef): string {
