@@ -35,9 +35,9 @@ export class RpcChain implements Chain {
     return Buffer.from(wasm);
   }
 
-  private async simulateRaw(network: Network, id: string, fn: string, args: xdr.ScVal[], account: Account, timeoutS: number) {
+  private async simulateRaw(network: Network, id: string, fn: string, args: xdr.ScVal[], account: Account, timeoutS: number, inclusionFee: string = BASE_FEE) {
     const { server, passphrase } = this.net(network);
-    const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: passphrase })
+    const tx = new TransactionBuilder(account, { fee: inclusionFee, networkPassphrase: passphrase })
       .addOperation(new Contract(id).call(fn, ...args)).setTimeout(timeoutS).build();
     const t0 = Date.now();
     const sim = await this.guard(network, () => server.simulateTransaction(tx));
@@ -57,16 +57,19 @@ export class RpcChain implements Chain {
     return { retval: r.sim.result?.retval ?? xdr.ScVal.scvVoid(), auth: r.auth, ledger: r.sim.latestLedger, minResourceFee: r.sim.minResourceFee, readWriteCount: r.readWriteCount, latencyMs: r.latencyMs };
   }
 
+  // opts.fee, when given, is the per-operation inclusion fee (stroops) used to build the
+  // transaction *before* simulation; the response's `fee` is always read back from the
+  // assembled transaction (inclusion fee + simulated resource fee) so it always matches
+  // the returned XDR, never the raw `opts.fee` value (Finding 2).
   async buildTx(network: Network, id: string, fn: string, args: xdr.ScVal[], source: string, opts: { fee?: string; timeoutS: number }): Promise<BuiltTx> {
     const { server } = this.net(network);
     const account = await this.guard(network, async () => {
       try { return await server.getAccount(source); }
       catch (e) { if (/not found|404/i.test(String((e as Error).message))) throw sourceNotFound(source); throw e; }
     });
-    const r = await this.simulateRaw(network, id, fn, args, account, opts.timeoutS);
+    const r = await this.simulateRaw(network, id, fn, args, account, opts.timeoutS, opts.fee ?? BASE_FEE);
     const assembled = rpc.assembleTransaction(r.tx, r.sim).build();
-    const fee = opts.fee ?? assembled.fee;
-    return { xdr: assembled.toXdr(), fee, auth: r.auth, ledger: r.sim.latestLedger, expiresAt: new Date(Date.now() + opts.timeoutS * 1000).toISOString() };
+    return { xdr: assembled.toXdr(), fee: assembled.fee, auth: r.auth, ledger: r.sim.latestLedger, expiresAt: new Date(Date.now() + opts.timeoutS * 1000).toISOString() };
   }
 
   private toStatus(hash: string, r: rpc.Api.GetTransactionResponse): TxStatus {
