@@ -29,36 +29,35 @@ export class Registry {
   whenIdle() { return this.queue.onIdle(); }
   invalidate(id: string) { this.cache.delete(id); }
 
-  /** Loads (or reuses) the cached { model, spec } for a row that already has a persisted model + specXdr. Returns null when there is nothing to cache yet. */
-  private ensureCache(id: string, row: ContractRow): Cached | null {
-    if (!row.model || !row.specXdr) return null;
+  /** Loads the row, requires it to exist and be ready (throwing 404 / 409 exactly as ready() does), and returns/builds the cached { model, spec } for it. Shared by ready() and learnHint() so both validate the contract the same way before touching it. */
+  private async ensureCache(id: string): Promise<{ row: ContractRow; cached: Cached }> {
+    const row = await this.deps.store.get(id);
+    if (!row) throw notFound('contract', id);
+    if (row.status !== 'ready' || !row.model || !row.specXdr) throw new ApiError(409, 'contract_not_ready', `contract is ${row.status}`, { details: { steps: row.steps, error: row.error } });
     let c = this.cache.get(id);
     if (!c || c.wasmHash !== row.wasmHash) {
       c = { model: row.model, spec: new contract.Spec(row.specXdr), wasmHash: row.wasmHash! };
       this.cache.set(id, c);
     }
-    return c;
+    return { row, cached: c };
   }
 
   async ready(id: string): Promise<{ row: ContractRow; model: ContractModel; spec: contract.Spec }> {
-    const row = await this.deps.store.get(id);
-    if (!row) throw notFound('contract', id);
-    if (row.status !== 'ready' || !row.model || !row.specXdr) throw new ApiError(409, 'contract_not_ready', `contract is ${row.status}`, { details: { steps: row.steps, error: row.error } });
-    const c = this.ensureCache(id, row)!; // model/specXdr are guaranteed by the check above
-    return { row, model: c.model, spec: c.spec };
+    const { row, cached } = await this.ensureCache(id);
+    return { row, model: cached.model, spec: cached.spec };
   }
 
-  // Ruling: must work before any ready() call — it loads the cache entry from the store itself
-  // (via ensureCache) instead of requiring one to already be populated.
+  // Ruling: must work before any explicit ready() call — ensureCache() loads the row/cache entry
+  // from the store itself instead of requiring one to already be populated.
+  // Ruling (review finding): validate the contract via ensureCache() BEFORE touching hints, so an
+  // unknown/not-ready id fails with a controlled 404/409 ApiError instead of setHint running first
+  // (which, on PgStore, would otherwise hit the fn_hints -> contracts FK and throw a raw pg error).
   async learnHint(id: string, fn: string, kind: FnKind) {
+    const { cached } = await this.ensureCache(id);
     await this.deps.store.setHint(id, fn, kind);
-    const row = await this.deps.store.get(id);
-    if (!row) return;
-    const c = this.ensureCache(id, row);
-    if (!c) return; // no persisted spec/model yet — the pipeline will pick up the hint on its next run
     const hints = await this.deps.store.getHints(id);
-    const model = buildModel(c.spec, { id: c.model.id, network: c.model.network, name: c.model.name, wasmHash: c.model.wasmHash, specLedger: c.model.specLedger }, hints);
-    c.model = model;
+    const model = buildModel(cached.spec, { id: cached.model.id, network: cached.model.network, name: cached.model.name, wasmHash: cached.model.wasmHash, specLedger: cached.model.specLedger }, hints);
+    cached.model = model;
     await this.deps.store.update(id, { model });
   }
 }

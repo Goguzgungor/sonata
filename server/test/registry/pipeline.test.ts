@@ -56,4 +56,8 @@ describe('Registry.register', () => {
     expect(spec.getFunc('bump')).toBeTruthy();
     expect(await store.getHints(FIXTURE_ID)).toEqual({ bump: 'write' });
   });
+  it('learnHint on an unknown contract is a 404, not a store error', async () => {
+    await expect(reg.learnHint('CNOPE', 'bump', 'write')).rejects.toMatchObject({ status: 404, error: 'contract_not_found' });
+    expect(await store.getHints('CNOPE')).toEqual({});
+  });
 });
