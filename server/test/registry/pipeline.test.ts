@@ -9,6 +9,9 @@ let chain: FakeChain, reg: Registry, store: MemoryStore;
 beforeEach(() => { chain = new FakeChain(); store = new MemoryStore(); reg = new Registry({ store, chain, gen }); });
 
 describe('Registry.register', () => {
+  it('rejects an invalid contract id', async () => {
+    await expect(reg.register('nope', 'testnet')).rejects.toMatchObject({ status: 400, error: 'invalid_contract_id' });
+  });
   it('returns queued immediately, then completes all steps', async () => {
     const first = await reg.register(FIXTURE_ID, 'testnet', 'Kitchen');
     expect(first.status).toBe('queued');

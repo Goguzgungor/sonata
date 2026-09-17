@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import pg from 'pg';
 import { PgStore, MemoryStore, type Store } from '../../src/registry/store.js';
+import { FIXTURE_ID } from '../fixtures/index.js';
 
 const URL = process.env.TEST_DATABASE_URL ?? 'postgres://sonata:sonata@localhost:5432/sonata_test';
-const ID = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB';
+const ID = FIXTURE_ID;
 
 function suite(name: string, make: () => Promise<{ store: Store; reset: () => Promise<void>; close: () => Promise<void> }>) {
   describe(name, () => {

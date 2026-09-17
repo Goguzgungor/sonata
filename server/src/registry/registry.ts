@@ -1,7 +1,7 @@
 import PQueue from 'p-queue';
-import { contract } from '@stellar/stellar-sdk';
+import { contract, StrKey } from '@stellar/stellar-sdk';
 import type { Chain } from '../chain/types.js';
-import { ApiError, notFound } from '../errors.js';
+import { ApiError, badRequest, notFound } from '../errors.js';
 import type { ContractModel, FnKind, Network } from '../types.js';
 import { buildModel } from '../spec/model.js';
 import { runPipeline, type Generators } from './pipeline.js';
@@ -16,6 +16,7 @@ export class Registry {
   constructor(private deps: { store: Store; chain: Chain; gen: Generators }) {}
 
   async register(id: string, network: Network, name: string | null = null): Promise<ContractRow> {
+    if (!StrKey.isValidContract(id)) throw badRequest('invalid_contract_id', 'contract id must be a 56-character C… address');
     const row = await this.deps.store.upsertQueued(id, network, name);
     this.cache.delete(id);
     if (!this.inflight.has(id)) {
