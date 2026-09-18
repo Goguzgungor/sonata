@@ -55,6 +55,9 @@ describe('buildMcpServer', () => {
   });
   it('build_* and submit work in rw', async () => {
     const { client } = await connect('rw');
+    const build = (await client.listTools()).tools.find((t) => t.name === 'build_ping')!;
+    expect(build.description).toContain('Requires `who` to authorize and emits Pinged.');
+    expect(build.description).toContain('Kind: ');
     const b = await client.callTool({ name: 'build_ping', arguments: { who: G, n: 1, source: G } });
     expect(b.structuredContent).toMatchObject({ xdr: 'AAAA', auth: [G] });
     const s = await client.callTool({ name: 'submit_transaction', arguments: { xdr: 'AAAA' } });
@@ -66,5 +69,6 @@ describe('buildMcpServer', () => {
     expect((s.structuredContent as any).functions.map((f: any) => f.name)).toEqual(['echo_bytes', 'echo_hash', 'echo_level', 'echo_map', 'echo_pair', 'echo_shape', 'maybe', 'text', 'tuple']);
     const d = await client.callTool({ name: 'get_docs', arguments: {} });
     expect((d.content as any)[0].text).toMatch(/^# KitchenSink/);
+    expect((d.structuredContent as any).text).toMatch(/^# KitchenSink/);
   });
 });

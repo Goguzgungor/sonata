@@ -17,6 +17,7 @@ const withSource = (s: JsonSchema, required: boolean): JsonSchema => {
 const CALL_OUT: JsonSchema = { type: 'object', properties: { result: {}, simulated: { type: 'boolean' }, latency_ms: { type: 'integer' }, ledger: { type: 'integer' }, auth: { type: 'array', items: { type: 'string' } } }, required: ['result', 'simulated'] };
 const BUILD_OUT: JsonSchema = { type: 'object', properties: { xdr: { type: 'string' }, fee: { type: 'string' }, auth: { type: 'array', items: { type: 'string' } }, ledger: { type: 'integer' }, expires_at: { type: 'string' } }, required: ['xdr'] };
 const TX_OUT: JsonSchema = { type: 'object', properties: { hash: { type: 'string' }, status: { type: 'string' }, ledger: { type: 'integer' }, fee_charged: { type: 'string' }, result_xdr: { type: 'string' } }, required: ['hash', 'status'] };
+const DOCS_OUT: JsonSchema = { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] };
 
 const ok = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data) }], structuredContent: data as Record<string, unknown> });
 /** Serializes an already-named error. Ruling: contract-error → spec-name renaming lives once, in
@@ -43,7 +44,8 @@ export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope:
         }
       });
     if (scope === 'rw') {
-      server.registerTool(toolName('build_', f.name), { description: `Build an UNSIGNED transaction for ${sig(f)}. Returns XDR for a wallet to sign; never signs.`, inputSchema: fromJsonSchema<Record<string, unknown>>(withSource(f.jsonSchema, true)), outputSchema: fromJsonSchema(BUILD_OUT) },
+      const buildDesc = `${f.doc ? f.doc.trim() + '\n\n' : ''}${sig(f)}\nKind: ${f.kind}. Builds an UNSIGNED transaction on ${model.network}; returns XDR for a wallet to sign; never signs or submits.`;
+      server.registerTool(toolName('build_', f.name), { description: buildDesc, inputSchema: fromJsonSchema<Record<string, unknown>>(withSource(f.jsonSchema, true)), outputSchema: fromJsonSchema(BUILD_OUT) },
         async (args) => {
           try {
             const { source, ...rest } = args;
@@ -72,8 +74,8 @@ export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope:
       const functions = model.functions.filter((f) => f.name.toLowerCase().includes(q) || f.doc.toLowerCase().includes(q)).map((f) => ({ name: f.name, signature: sig(f), doc: f.doc, kind: f.kind })).sort((a, b) => a.name.localeCompare(b.name));
       return ok({ functions });
     });
-  server.registerTool('get_docs', { description: 'llms.txt for this contract: functions, types, errors, events and endpoints.', inputSchema: fromJsonSchema<Record<string, never>>({ type: 'object', properties: {} }) },
-    async () => { const { row } = await deps.registry.ready(model.id); return { content: [{ type: 'text' as const, text: row.llmsTxt ?? '' }] }; });
+  server.registerTool('get_docs', { description: 'llms.txt for this contract: functions, types, errors, events and endpoints.', inputSchema: fromJsonSchema<Record<string, never>>({ type: 'object', properties: {} }), outputSchema: fromJsonSchema(DOCS_OUT) },
+    async () => { const { row } = await deps.registry.ready(model.id); const text = row.llmsTxt ?? ''; return { content: [{ type: 'text' as const, text }], structuredContent: { text } }; });
   server.registerResource('llms.txt', `sonata://c/${model.id}/llms.txt`, { description: 'AI-ready contract docs', mimeType: 'text/markdown' },
     async (uri) => { const { row } = await deps.registry.ready(model.id); return { contents: [{ uri: uri.href, mimeType: 'text/markdown', text: row.llmsTxt ?? '' }] }; });
   return server;
