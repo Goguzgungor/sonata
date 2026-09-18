@@ -110,7 +110,7 @@ export default function Welcome() {
       <section className="home-section">
         <div className="home-section__head">
           <Label>Platform surfaces</Label>
-          <h2 className="sn-h1">One source of truth. Four production interfaces.</h2>
+          <h2 className="sn-h1">One source of truth. Three production interfaces.</h2>
         </div>
         <div className="surfaces">
           {SURFACES.map((s, i) => (
@@ -159,7 +159,7 @@ export default function Welcome() {
         <div className="page-head">
           <div>
             <h2 className="sn-h1">Ready when your contract is.</h2>
-            <p className="sn-body sn-muted" style={{ marginTop: 12, maxWidth: 520 }}>Register a contract, create a key, and call it from anywhere. Start on Testnet, switch to Mainnet when you ship.</p>
+            <p className="sn-body sn-muted" style={{ marginTop: 12, maxWidth: 520 }}>Connect a wallet, register a contract, and call it from anywhere. Start on Testnet, switch to Mainnet when you ship.</p>
           </div>
           <div className="actions">
             <S.Button arrow onClick={() => router.push('/register')}>Register a contract</S.Button>

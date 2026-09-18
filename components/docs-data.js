@@ -99,7 +99,10 @@ curl -X POST "${API_URL}/c/{contractId}/submit" \\
 { "xdr": "AAAAAgAAAADzKF2C…", "fee": "100", "auth": ["from"], "ledger": 123, "expires_at": "2026-09-18T14:32:00Z" }
 
 // error
-{ "error": "not_owner", "message": "this contract was registered by another wallet", "code": 403, "details": { "owner": "G…" } }` }
+{ "error": "not_owner", "message": "this contract was registered by another wallet", "details": { "owner": "G…" } }
+
+// error, contract-raised (code is the contract's own error number)
+{ "error": "TooBig", "message": "The number was too big.", "code": 1, "details": { "fn": "checked" } }` }
       ] },
       { h: 'Authentication and limits', blocks: [
         { p: 'Registering a contract or changing its settings needs a session: sign a SEP-10-style challenge with your wallet to get a bearer token valid for 24 hours. Reads, simulation, transaction building and submission need no session. The API allows 120 requests per minute per IP. Stellar Asset Contracts (SACs) are not supported and return sac_unsupported.' }
