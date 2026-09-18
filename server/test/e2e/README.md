@@ -2,7 +2,7 @@
 
 Needs a `.env.test` (git-ignored) in `server/` with `E2E_CONTRACT_ID` and `E2E_SECRET_KEY` for a funded testnet account that owns the deployed kitchen-sink fixture.
 
-Run with `npm run test:e2e` (excluded from `npm test`; talks to real testnet RPC).
+Run with `npm run test:e2e` (excluded from `npm test`; talks to real testnet RPC). Without those two variables the suite skips itself rather than failing, so a nightly job with no secrets is green.
 
 If the contract expires or the account runs dry (testnet resets quarterly), redeploy with the Step-1 commands from the Task 12 brief:
 

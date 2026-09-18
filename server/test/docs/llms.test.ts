@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { contract } from '@stellar/stellar-sdk';
 import { loadFixtureWasm, FIXTURE_ID } from '../fixtures/index.js';
 import { buildModel, wasmHashOf } from '../../src/spec/model.js';
-import { llmsTxt } from '../../src/docs/llms.js';
+import { exampleArgs, llmsTxt } from '../../src/docs/llms.js';
+import { encodeArgs } from '../../src/spec/codec.js';
 
 const wasm = loadFixtureWasm();
-const model = buildModel(contract.Spec.fromWasm(wasm), { id: FIXTURE_ID, network: 'testnet', name: 'KitchenSink', wasmHash: wasmHashOf(wasm), specLedger: 0 });
+const spec = contract.Spec.fromWasm(wasm);
+const model = buildModel(spec, { id: FIXTURE_ID, network: 'testnet', name: 'KitchenSink', wasmHash: wasmHashOf(wasm), specLedger: 0 });
 const cfg = { publicBaseUrl: 'https://api.sonata.test' };
 
 describe('llmsTxt', () => {
@@ -21,6 +23,19 @@ describe('llmsTxt', () => {
     expect(out).toContain('1 TooBig · The number was too big.');
     expect(out).toContain(`https://api.sonata.test/c/${FIXTURE_ID}/mcp`);
     expect(out).toContain(`POST https://api.sonata.test/c/${FIXTURE_ID}/call/{fn}`);
+  });
+  it('shows a curl example the server would actually accept', () => {
+    const line = out.split('\n').find((l) => l.startsWith('curl '))!;
+    const payload = JSON.parse(/-d '(.*)'$/.exec(line)![1]);
+    expect(payload.args).toEqual({ a: '0', b: '0' });                                  // not the old, always-400 `{}`
+    expect(() => encodeArgs(spec, model.functions[0].name, payload.args)).not.toThrow();
+  });
+  it('documents every JSON convention the codec implements', () => {
+    for (const phrase of ['decimal strings', '0x-hex', 'maps are objects', 'enums are integers', '{tag, values}', 'tuples are arrays', 'Option'])
+      expect(out).toContain(phrase);
+  });
+  it('builds args the codec accepts for every function in the fixture', () => {
+    for (const f of model.functions) expect(() => encodeArgs(spec, f.name, exampleArgs(f.jsonSchema)), f.name).not.toThrow();
   });
   it('falls back to the short id when unnamed', () => {
     expect(llmsTxt({ ...model, name: null }, cfg)).toMatch(/^# CAAA…BSC4/);

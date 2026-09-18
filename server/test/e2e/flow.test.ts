@@ -12,11 +12,13 @@ import { openapi } from '../../src/docs/openapi.js';
 import { buildApp } from '../../src/http/app.js';
 
 if (existsSync('.env.test')) for (const l of readFileSync('.env.test', 'utf8').split('\n')) { const m = /^(\w+)=(.*)$/.exec(l.trim()); if (m && !process.env[m[1]]) process.env[m[1]] = m[2]; }
-const ID = process.env.E2E_CONTRACT_ID!; const SECRET = process.env.E2E_SECRET_KEY!;
-const kp = Keypair.fromSecret(SECRET); const G = kp.publicKey();
+// Nothing here may run — or throw — at import time: `npm test` collects this file too, and the
+// nightly job runs the suite with no E2E env at all (review finding M-b).
+const ID = process.env.E2E_CONTRACT_ID ?? ''; const SECRET = process.env.E2E_SECRET_KEY ?? '';
 
-let app: ReturnType<typeof buildApp>, base: string;
-beforeAll(async () => {
+let app: ReturnType<typeof buildApp>, base: string, kp: Keypair, G: string;
+const setUp = async () => {
+  kp = Keypair.fromSecret(SECRET); G = kp.publicKey();
   const cfg = loadConfig({ DATABASE_URL: 'postgres://unused', PUBLIC_BASE_URL: 'http://127.0.0.1' });
   const chain = new RpcChain(cfg); const store = new MemoryStore();
   const registry = new Registry({ store, chain, gen: { llmsTxt: (m) => llmsTxt(m, cfg), openapi: (m) => openapi(m, cfg) } });
@@ -25,12 +27,13 @@ beforeAll(async () => {
   base = `http://127.0.0.1:${(app.server.address() as any).port}`;
   await app.inject({ method: 'POST', url: '/contracts', payload: { id: ID, network: 'testnet', name: 'KitchenSink' } });
   await registry.whenIdle();
-}, 60_000);
-afterAll(() => app.close());
+};
 
 const post = (url: string, payload: unknown) => app.inject({ method: 'POST', url, payload });
 
-describe('e2e on testnet', () => {
+describe.skipIf(!ID || !SECRET)('e2e on testnet', () => {
+  beforeAll(setUp, 60_000);
+  afterAll(() => app.close());
   it('registered and ready', async () => {
     const st = await app.inject({ method: 'GET', url: `/c/${ID}/status` });
     expect(st.json(), JSON.stringify(st.json())).toMatchObject({ status: 'ready' });
