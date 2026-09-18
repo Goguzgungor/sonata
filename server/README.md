@@ -37,6 +37,7 @@ Base URL `PUBLIC_BASE_URL` (prod: `https://api.sonata.brages.uk`). JSON everywhe
 | `GET /c/:id/openapi.json` | Per-contract OpenAPI 3.1 | JSON |
 | `GET /c/:id/events` | History | `501 {error: 'not_indexed'}` |
 | `GET /healthz` | Liveness | `200 {db: 'ok', networks: {testnet: 'ok'}}` |
+| `ALL /mcp` | Global MCP (all contracts) | Streamable HTTP |
 
 `return_value` is the invocation's returned ScVal (base64), present on success only; `result_xdr` is the whole `TransactionResult` (base64), present on success and failure. A submit is never retried, and `DUPLICATE` / `TRY_AGAIN_LATER` from the RPC are reported as `pending` (then polled), not as an error — only `ERROR` is `422 submit_rejected`. Stellar Asset Contracts (classic assets such as XLM or USDC) have no WASM; they register from the built-in SEP-41 token spec and expose `balance`, `transfer`, `approve`, … like any other contract (`sac: true` in `GET /c/:id`).
 
@@ -48,7 +49,32 @@ The `auth_secret` (JWT signing key) and `auth_signing_seed` (SEP-10 challenge si
 
 ## MCP
 
-Each registered contract exposes its own MCP server over Streamable HTTP:
+One global MCP server over Streamable HTTP covers every registered contract, on any network:
+
+```json
+{"mcpServers":{"sonata":{"url":"https://api.sonata.brages.uk/mcp","type":"http"}}}
+```
+
+```bash
+claude mcp add --transport http sonata https://api.sonata.brages.uk/mcp
+```
+
+| Tool | Input | Output | Notes |
+|---|---|---|---|
+| `list_contracts` | `{ network?: 'testnet'|'mainnet', q?: string, include_pending?: boolean }` | `{ contracts: [{ id, name, network, status, fns, sac, owner, updated_at }] }` | Ready rows only unless `include_pending`; `q` is a case-insensitive substring on name or id; sorted by `updated_at` desc; capped at 200 |
+| `get_contract` | `{ id }` | `{ id, name, network, sac, mcp_scope, functions: [{ name, signature, doc, kind, input_schema }], types, errors, events, urls }` | The public row minus pipeline steps, with `input_schema` = the function's JSON schema (the same one `call`/`build` validate against) |
+| `search_functions` | `{ id, query }` | `{ functions: [{ name, signature, doc, kind }] }` | Same semantics as the per-contract tool |
+| `get_docs` | `{ id }` | `{ text }` | llms.txt |
+| `call` | `{ id, fn, args?, source? }` | `{ result, simulated: true, latency_ms, ledger, auth }` | Simulation; `source` optional (defaults to the configured sim account); learns read/write hints exactly like REST |
+| `build` | `{ id, fn, args?, source, fee?, timeout_s? }` | `{ xdr, fee, auth, ledger, expires_at }` | **Only if the contract's `mcp_scope` is `rw`**; otherwise `isError` `{ error: 'write_tools_disabled', message: 'the owner of <id> has not enabled write tools; ask them to switch the MCP scope to read + write' }` |
+| `submit` | `{ id, xdr }` | `{ hash, status, ledger?, fee_charged?, return_value?, result_xdr? }` | Same `rw` gate; waits ≤ 30 s |
+| `get_tx` | `{ hash, network }` | same as `submit` | Poll a pending submit |
+
+`build` and `submit` only work for a contract whose owner has switched its MCP scope to read + write (`PATCH /c/:id {mcp_scope: 'rw'}`); every other tool works regardless of scope.
+
+### Per-contract endpoint
+
+Each registered contract also exposes its own scoped MCP server:
 
 ```bash
 claude mcp add --transport http sonata-<name> https://api.sonata.brages.uk/c/<id>/mcp

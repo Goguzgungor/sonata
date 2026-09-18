@@ -80,6 +80,18 @@ describe.skipIf(!ID || !SECRET)('e2e on testnet', () => {
     expect((b.structuredContent as any).xdr).toMatch(/^AAAA/);
     await client.close();
   }, 60_000);
+  it('global MCP: list_contracts, call and build over Streamable HTTP', async () => {
+    await app.inject({ method: 'PATCH', url: `/c/${ID}`, payload: { mcp_scope: 'rw' }, headers: { authorization: `Bearer ${token}` } });
+    const client = new Client({ name: 'e2e', version: '0' });
+    await client.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`)));
+    const list = await client.callTool({ name: 'list_contracts', arguments: {} });
+    expect((list.structuredContent as any).contracts.map((c: any) => c.id)).toContain(ID);
+    const c = await client.callTool({ name: 'call', arguments: { id: ID, fn: 'add', args: { a: '2', b: '3' } } });
+    expect(c.isError).toBeFalsy(); expect((c.structuredContent as any).result).toBe('5');
+    const b = await client.callTool({ name: 'build', arguments: { id: ID, fn: 'bump', source: G } });
+    expect((b.structuredContent as any).xdr).toMatch(/^AAAA/);
+    await client.close();
+  }, 60_000);
   it('a Stellar Asset Contract registers from the built-in spec and answers reads', async () => {
     const SAC = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';   // testnet native XLM
     await app.inject({ method: 'POST', url: '/contracts', payload: { id: SAC, network: 'testnet', name: 'XLM' }, headers: { authorization: `Bearer ${token}` } });
