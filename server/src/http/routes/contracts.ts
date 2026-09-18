@@ -22,11 +22,18 @@ const notOwner = (owner: string) => new ApiError(403, 'not_owner', 'this contrac
 export const contractRoutes = (deps: Deps): FastifyPluginAsync => async (app) => {
   const base = deps.cfg.publicBaseUrl;
 
-  /** The row the caller may change: 404 unknown, 403 someone else's, and a legacy NULL owner is claimed on the spot. */
+  /** The row the caller may change: 404 unknown, 403 someone else's, and a legacy NULL owner is claimed on the spot.
+   *  The claim itself goes through `claimOwner`, an atomic "set owner only if still NULL" — two concurrent PATCHes
+   *  from different wallets can both pass the `!row.owner` read below, so only one of them may win the write. */
   const ownedRow = async (id: string, address: string) => {
     const row = await deps.store.get(id); if (!row) throw notFound('contract', id);
     if (row.owner && row.owner !== address) throw notOwner(row.owner);
-    if (!row.owner) { deps.log.info({ id, address }, 'legacy contract claimed'); return deps.store.update(id, { owner: address }); }
+    if (!row.owner) {
+      const claimed = await deps.store.claimOwner(id, address);
+      if (claimed) { deps.log.info({ id, address }, 'legacy contract claimed'); return claimed; }
+      const now = await deps.store.get(id); if (!now) throw notFound('contract', id);
+      throw notOwner(now.owner!);
+    }
     return row;
   };
 

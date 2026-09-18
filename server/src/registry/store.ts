@@ -1,6 +1,6 @@
 import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { contracts, fnHints, settings } from './schema.js';
 import type { ContractModel, ContractStatus, FnKind, JsonSchema, McpScope, Network, Step } from '../types.js';
 
@@ -19,6 +19,8 @@ export interface Store {
   /** Creates or re-queues a row. `owner` is stored on create and fills a NULL (legacy) owner; it never replaces an existing owner. */
   upsertQueued(id: string, network: Network, name: string | null, owner: string | null): Promise<ContractRow>;
   update(id: string, patch: RowPatch): Promise<ContractRow>;
+  /** Atomically claims a legacy (owner NULL) row: sets `owner` only if it is still NULL. Returns the updated row, or null when the row is missing or already owned (a race the caller must handle, not overwrite). */
+  claimOwner(id: string, owner: string): Promise<ContractRow | null>;
   getHints(id: string): Promise<Record<string, FnKind>>;
   setHint(id: string, fn: string, kind: FnKind): Promise<void>;
   getSetting(key: string): Promise<string | null>;
@@ -46,6 +48,10 @@ export class MemoryStore implements Store {
   async update(id: string, patch: RowPatch) {
     const r = this.rows.get(id); if (!r) throw new Error(`no row ${id}`);
     const next = { ...r, ...patch, updatedAt: new Date() }; this.rows.set(id, next); return structuredClone(next);
+  }
+  async claimOwner(id: string, owner: string) {
+    const r = this.rows.get(id); if (!r || r.owner) return null;
+    const next = { ...r, owner, updatedAt: new Date() }; this.rows.set(id, next); return structuredClone(next);
   }
   async getHints(id: string) { return { ...(this.hints.get(id) ?? {}) }; }
   async setHint(id: string, fn: string, kind: FnKind) { this.hints.set(id, { ...(this.hints.get(id) ?? {}), [fn]: kind }); }
@@ -78,6 +84,10 @@ export class PgStore implements Store {
   async update(id: string, patch: RowPatch) {
     const [r] = await this.db.update(contracts).set({ ...patch, updatedAt: sql`now()` } as any).where(eq(contracts.id, id)).returning();
     if (!r) throw new Error(`no row ${id}`); return toRow(r);
+  }
+  async claimOwner(id: string, owner: string) {
+    const [r] = await this.db.update(contracts).set({ owner, updatedAt: sql`now()` }).where(and(eq(contracts.id, id), isNull(contracts.owner))).returning();
+    return r ? toRow(r) : null;
   }
   async getHints(id: string) {
     const rows = await this.db.select().from(fnHints).where(eq(fnHints.contractId, id));

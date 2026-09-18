@@ -99,7 +99,8 @@ describe('contracts routes', () => {
     const patch = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { name: 'Claimed' }, headers: bearer(carol.token) });
     expect(patch.statusCode).toBe(200); expect(patch.json()).toMatchObject({ name: 'Claimed', owner: carol.address });
     const dave = await signInAs(app, Keypair.random());
-    expect((await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { name: 'Nope' }, headers: bearer(dave.token) })).statusCode).toBe(403);
+    const daveTry = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { name: 'Nope' }, headers: bearer(dave.token) });
+    expect(daveTry.statusCode).toBe(403); expect(daveTry.json()).toMatchObject({ error: 'not_owner', details: { owner: carol.address } });
   });
   it('GET /contracts?owner=me lists only the caller\'s contracts and needs a session', async () => {
     const { app, registry } = await testApp();

@@ -18,6 +18,19 @@ describe('owner column', () => {
     expect((await s.get(FIXTURE_ID))!.owner).toBeNull();
     expect((await s.upsertQueued(FIXTURE_ID, 'testnet', null, B)).owner).toBe(B);
   });
+  it('claimOwner sets a NULL owner atomically; a second claim loses, and the first owner stands', async () => {
+    const s = new MemoryStore();
+    await s.upsertQueued(FIXTURE_ID, 'testnet', null, null);
+    const claimed = await s.claimOwner(FIXTURE_ID, A);
+    expect(claimed!.owner).toBe(A);
+    const lost = await s.claimOwner(FIXTURE_ID, B);
+    expect(lost).toBeNull();
+    expect((await s.get(FIXTURE_ID))!.owner).toBe(A);
+  });
+  it('claimOwner returns null for an unknown id', async () => {
+    const s = new MemoryStore();
+    expect(await s.claimOwner('CNOPE', A)).toBeNull();
+  });
   it('list filters by owner', async () => {
     const s = new MemoryStore();
     await s.upsertQueued(FIXTURE_ID, 'testnet', null, A);
