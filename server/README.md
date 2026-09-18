@@ -13,7 +13,7 @@ npm i
 npm run dev
 ```
 
-The API listens on `http://localhost:8080`.
+`npm run dev` reads `.env` automatically (via Node's `--env-file-if-exists` flag) and restarts on file changes. The API listens on `http://localhost:8080`.
 
 ## Endpoints
 

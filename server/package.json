@@ -4,7 +4,7 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "scripts": {
-    "dev": "tsx watch src/main.ts",
+    "dev": "node --env-file-if-exists=.env --import tsx --watch src/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -12,7 +12,7 @@
     "test:watch": "vitest --exclude 'test/e2e/**'",
     "test:e2e": "vitest run test/e2e",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/registry/migrate.ts"
+    "db:migrate": "node --env-file-if-exists=.env --import tsx src/registry/migrate.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",
