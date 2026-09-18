@@ -50,6 +50,22 @@ describe('api()', () => {
     expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ args: { who: 'G', n: 1 }, source: 'GSRC', timeout_s: 60 });
     expect(fetch.mock.calls[1][0]).toBe(`${API_URL}/c/${ID}/tx/ping`);
   });
+  it('200 with non-JSON body becomes ApiError', async () => {
+    fetch.mockResolvedValue(new Response('not json', { status: 200 }));
+    const err = await api('/x').catch((e) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err).toMatchObject({ status: 200, error: 'bad_response' });
+  });
+  it('204 resolves to null', async () => {
+    fetch.mockResolvedValue(new Response(null, { status: 204 }));
+    expect(await api('/x')).toBe(null);
+  });
+  it('AbortError is rethrown as-is', async () => {
+    fetch.mockRejectedValue(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+    const err = await api('/x').catch((e) => e);
+    expect(err.name).toBe('AbortError');
+    expect(err).not.toBeInstanceOf(ApiError);
+  });
 });
 
 describe('helpers', () => {
