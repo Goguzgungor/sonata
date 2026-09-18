@@ -1,0 +1,37 @@
+name: server
+on:
+  push: { paths: ['server/**', '.github/workflows/server.yml'] }
+  pull_request: { paths: ['server/**'] }
+  workflow_dispatch:
+  schedule: [{ cron: '17 3 * * *' }]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: sonata, POSTGRES_PASSWORD: sonata, POSTGRES_DB: sonata_test }
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U sonata" --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults: { run: { working-directory: server } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: server/package-lock.json }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: DATABASE_URL=postgres://sonata:sonata@localhost:5432/sonata_test npm run db:migrate
+      - run: TEST_DATABASE_URL=postgres://sonata:sonata@localhost:5432/sonata_test npm test
+  e2e:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: server } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: server/package-lock.json }
+      - run: npm ci
+      - run: npm run test:e2e
+        env:
+          E2E_CONTRACT_ID: ${{ vars.E2E_CONTRACT_ID }}
+          E2E_SECRET_KEY: ${{ secrets.E2E_SECRET_KEY }}
