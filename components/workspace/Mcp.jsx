@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { contracts, shortId } from '@/lib/api';
 import { Label, CodeBox, CopyButton, ResponsiveTable } from '@/components/ui';
 
@@ -18,6 +18,7 @@ export default function Mcp({ S, contract: c, id, refetch }) {
   const [scope, setScope] = useState(c?.mcp_scope);
   const [err, setErr] = useState(null);
   const [saving, setSaving] = useState(false);
+  useEffect(() => { setScope(c?.mcp_scope); }, [c?.mcp_scope]);
   if (!c) return null;
   const rw = scope === 'rw';
   const change = async (v) => {
