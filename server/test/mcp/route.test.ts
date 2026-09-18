@@ -40,3 +40,17 @@ describe('ALL /c/:id/mcp', () => {
     expect(res.statusCode).toBe(404); expect(res.json().error).toBe('contract_not_found');
   });
 });
+
+describe('ALL /mcp', () => {
+  it('serves the global server over Streamable HTTP, stateless', async () => {
+    const t = await testApp(); app = t.app; await t.registerFixture();
+    await t.app.listen({ port: 0, host: '127.0.0.1' });
+    const port = (t.app.server.address() as any).port;
+    const client = new Client({ name: 't', version: '0' });
+    await client.connect(new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`)));
+    expect((await client.listTools()).tools.map((x) => x.name)).toContain('list_contracts');
+    const r = await client.callTool({ name: 'get_contract', arguments: { id: FIXTURE_ID } });
+    expect(r.structuredContent).toMatchObject({ id: FIXTURE_ID });
+    await client.close();
+  });
+});

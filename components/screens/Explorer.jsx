@@ -3,8 +3,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSonataUI } from '@/lib/sonata';
-import { Label } from '@/components/ui';
-import { contracts, shortId, shortAddr, relTime } from '@/lib/api';
+import { Label, CopyButton } from '@/components/ui';
+import { contracts, shortId, shortAddr, relTime, mcpGlobalOneLiner } from '@/lib/api';
 import { useApi } from '@/lib/useApi';
 import Async from '@/components/Async';
 
@@ -33,6 +33,13 @@ export default function Explorer() {
           <p className="sn-body sn-muted" style={{ marginTop: 12, maxWidth: 560 }}>Every Soroban contract registered with Sonata. Each one has a hosted REST API, MCP tools and docs you can use without registering anything yourself.</p>
         </div>
         <span className="sn-label sn-muted">{data ? `${all.length} contracts` : ''}</span>
+      </div>
+      <div className="cta-band">
+        <div>
+          <div className="sn-h3">Connect an agent</div>
+          <div className="sn-mono sn-muted" style={{ marginTop: 6, overflowWrap: 'anywhere' }}>{mcpGlobalOneLiner}</div>
+        </div>
+        <div className="actions"><CopyButton S={S} variant="secondary" text={mcpGlobalOneLiner}>Copy</CopyButton></div>
       </div>
       <div className="filters">
         <div className="filters__seg"><S.Segmented ariaLabel="Network" options={NETS} value={net} onChange={setNet} /></div>

@@ -5,6 +5,7 @@ import type { Deps } from '../deps.js';
 import type { TxStatus } from '../../chain/types.js';
 import { badRequest, notFound } from '../../errors.js';
 import { decodeResult, encodeArgs, namedContractError } from '../../spec/codec.js';
+import { learnKind } from '../../registry/hints-policy.js';
 
 const NETWORK = z.enum(['testnet', 'mainnet']);
 /** A bad `source` must be a 400 here, not a 500/502 from the SDK or the RPC deeper in (review finding I2). */
@@ -28,11 +29,7 @@ export const invokeRoutes = (deps: Deps): FastifyPluginAsync => async (app) => {
     const scArgs = encodeArgs(spec, req.params.fn, b.args);
     const sim = await deps.chain.simulate(model.network, model.id, req.params.fn, scArgs, b.source ?? deps.cfg.simSourceAccount).catch((e) => namedContractError(e, model, spec));
     const kind = sim.auth.length === 0 && sim.readWriteCount === 0 ? 'read' : 'write';
-    const current = model.functions.find((f) => f.name === req.params.fn)!.kind;
-    if (current !== kind) {
-      try { await deps.registry.learnHint(model.id, req.params.fn, kind); }
-      catch (e) { req.log.warn({ err: e }, 'hint'); }
-    }
+    await learnKind(deps, model, req.params.fn, kind, req.log);
     return { result: decodeResult(spec, req.params.fn, sim.retval), simulated: true, latency_ms: sim.latencyMs, ledger: sim.ledger, auth: sim.auth };
   });
 

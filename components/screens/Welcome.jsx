@@ -3,9 +3,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSonataUI } from '@/lib/sonata';
 import { Label, CodeBox, CopyButton } from '@/components/ui';
-import { contracts, health, mcpToolCount, shortId, API_URL } from '@/lib/api';
+import { contracts, health, mcpToolCount, shortId, API_URL, mcpGlobalConfig, mcpGlobalOneLiner } from '@/lib/api';
 import { useApi } from '@/lib/useApi';
-import { mcpConfig } from '@/components/workspace/Mcp';
 
 const PRE = { margin: 0, fontSize: 12, lineHeight: 1.7, fontFamily: 'var(--sn-font-mono)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' };
 const ROWS = [
@@ -20,7 +19,7 @@ const STEPS = [
 ];
 const SURFACES = [
   { audience: 'Backend teams', name: 'Hosted REST API', d: 'Call any function with JSON. Sonata handles XDR encoding, simulation and fee estimation.', endpoint: 'POST /c/{contractId}/call/{fn}' },
-  { audience: 'AI agents', name: 'MCP server', d: 'Search, docs, reads, simulation and transaction building exposed as tools.', endpoint: '/c/{contractId}/mcp' },
+  { audience: 'AI agents', name: 'MCP server', d: 'Search, docs, reads, simulation and transaction building exposed as tools.', endpoint: '/mcp' },
   { audience: 'Context windows', name: 'AI-ready docs', d: 'A compact llms.txt generated from the contract spec.', endpoint: 'GET /c/{contractId}/llms.txt' }
 ];
 const firstRead = (c) => (c.functions || []).find((f) => f.kind === 'read') || (c.functions || [])[0];
@@ -47,7 +46,7 @@ export default function Welcome() {
   const curl = ex && fn
     ? `curl -X POST "${API_URL}/c/${ex.id}/call/${fn.name}" \\\n  -H "Content-Type: application/json" \\\n  -d '{ "args": {} }'\n\n# ${ex.name || shortId(ex.id)} · ${ex.network} · ${ex.functions.length} functions`
     : `curl -X POST "${API_URL}/c/{contractId}/call/{fn}" \\\n  -H "Content-Type: application/json" \\\n  -d '{ "args": {} }'`;
-  const mcp = ex ? `${mcpConfig(ex)}\n\n# or\nclaude mcp add --transport http sonata ${ex.urls.mcp}` : `claude mcp add --transport http sonata ${API_URL}/c/{contractId}/mcp`;
+  const mcp = `${mcpGlobalConfig}\n\n# or\n${mcpGlobalOneLiner}`;
   return (
     <main className="home">
       {/* Hero: full-width staff score, then copy left + surfaces right */}

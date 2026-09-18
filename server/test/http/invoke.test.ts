@@ -25,6 +25,15 @@ describe('POST /call', () => {
     expect(res.json()).toMatchObject({ result: null, auth: [G] });
     expect(await store.getHints(FIXTURE_ID)).toEqual({ ping: 'write' });
   });
+  it('never downgrades a learned write hint on a later auth-less simulation (review finding I5)', async () => {
+    const { app, chain, registerFixture, store } = await testApp(); await registerFixture();
+    chain.impl.simulate = async () => ({ retval: xdr.ScVal.scvVoid(), auth: [G], ledger: 1, minResourceFee: '1', readWriteCount: 1, latencyMs: 1 });
+    await call(app, 'ping', { args: { who: G, n: 1 } });
+    expect(await store.getHints(FIXTURE_ID)).toEqual({ ping: 'write' });
+    chain.impl.simulate = async () => ({ retval: xdr.ScVal.scvVoid(), auth: [], ledger: 2, minResourceFee: '1', readWriteCount: 0, latencyMs: 1 });
+    await call(app, 'ping', { args: { who: G, n: 1 } });
+    expect(await store.getHints(FIXTURE_ID)).toEqual({ ping: 'write' });
+  });
   it('400 invalid_args with a path; 404 unregistered contract and unknown fn; 400 network mismatch', async () => {
     const { app, registerFixture, registry } = await testApp();
     expect((await call(app, 'add', { args: {} })).statusCode).toBe(404);

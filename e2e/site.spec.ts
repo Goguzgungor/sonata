@@ -52,6 +52,8 @@ test('owner: register → workspace controls → rename → scope → simulate �
   await expect(page.getByText('Unsigned XDR', { exact: true })).toBeVisible({ timeout: 30_000 });
 
   await page.getByRole('tab', { name: /MCP/ }).click();
+  await expect(page.getByText('All contracts (recommended)')).toBeVisible();
+  await expect(page.getByText(`${API}/mcp`).first()).toBeVisible();
   await page.getByRole('radio', { name: 'Read + write' }).click();
   await expect(page.getByText(`Tools · ${n * 2 + 3} enabled`)).toBeVisible({ timeout: 15_000 });
 

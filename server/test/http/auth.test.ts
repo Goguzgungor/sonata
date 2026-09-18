@@ -39,5 +39,6 @@ describe('auth routes', () => {
     expect(res.statusCode).toBeLessThan(300);
     expect(res.headers['access-control-allow-origin']).toBe('https://sonata.test');
     expect(String(res.headers['access-control-allow-headers']).toLowerCase()).toContain('authorization');
+    expect(String(res.headers['access-control-allow-headers']).toLowerCase()).toContain('mcp-protocol-version');
   });
 });
