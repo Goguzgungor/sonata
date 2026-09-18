@@ -113,3 +113,16 @@ app/explorer/[id]/page.jsx                                          (modified)
 .env.example  README.md  package.json (scripts + dev deps)  vitest.config.js  playwright.config.js
 test/site/*.test.js  e2e/site.spec.ts  .github/workflows/site.yml
 ```
+
+## 8. Amendments (2026-09-18, after implementation + whole-branch review)
+
+- **`urls`:** the API returns `urls: { mcp, llms, openapi }` only — no `base`. The client derives the base with `contracts.urls(id).base`.
+- **§4 Workspace shell, 409:** `GET /c/:id` returns the row for any registered contract regardless of status (it never 409s); the shell renders the not-ready pipeline view from `contract.status !== 'ready'` + `contract.steps`, polling `GET /c/:id/status`. The spec's "409 → steps from `details.steps`" clause was wrong. **404** → the shared `<NotRegistered>` panel (also used by the public page).
+- **§3 hooks:** `useApi` returns `{ data, error, loading, refetching, refetch }` — `loading` only while there is no data yet, `refetching` during a refetch; `<Async>` keeps children rendered while refetching (no skeleton flash on mutations). `usePoll` resets its state on (re)start and backs off on consecutive errors (interval doubles up to 15 s, resets on success). The tab body is rendered with `key={id}`.
+- **§4 Functions, `Option<T>` inputs:** a single-arm `anyOf` is unwrapped for widget selection and placeholder (`Option<u64>` → text field, `Option<u32>` → number field, `Option<Address>` → text; containers stay JSON); an empty optional is omitted. `Option<bool>` stays a JSON field (a checkbox cannot express "absent"). C-style enums suggest their first valid case.
+- **§4 Public page:** a registered-but-not-ready contract renders a dedicated "registering" branch (real name/id/network/status/steps, no preview bar, no fabricated stats); `<Demo>` + `<PreviewBar>` are reserved for a 404 with a catalogue entry. `generateMetadata` fetches with `next: { revalidate: 60 }` and a 1.5 s timeout (no `force-dynamic`).
+- **§4 MCP:** the kit's `Segmented` has no `disabled` prop; scope changes are blocked while saving with a `pointer-events: none` wrapper plus a guard. Scope state re-syncs from the contract prop.
+- **Tool count** lives in one helper, `mcpToolCount(c)` in `lib/api.js` (`N+2` read-only, `2N+3` read+write), used by the shell, Overview and the public page.
+- **§6 CI:** the Playwright job is deliberately not in CI yet (it needs Postgres + the testnet fixture); `site.yml` runs vitest + `next build`. The e2e reads the fixture's function count at runtime instead of hard-coding it and restores `mcp_scope` afterwards.
+- **Demo constants:** `components/data.js` exports `DEMO_API_URL` (was `API_URL`) to avoid colliding with the env-driven `API_URL` in `lib/api.js`.
+- **Known follow-up:** `useApi` keeps previous data on a deps (id) change without remount; no current navigation path triggers it.
