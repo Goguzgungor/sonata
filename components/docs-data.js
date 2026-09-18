@@ -1,61 +1,32 @@
-const DEMO_API_URL = 'https://api.sonata.brages.uk';
-const CONTRACT_ID = 'CGA4VK53W6R2XPLZ7SM3NQ7TRH24JC7SFK3D5TPZ2XQ7WVN6M6ABCD4R';
-const MCP_URL = DEMO_API_URL + '/c/CGA4…D4R/mcp';
-const MCP_CONFIG = `{
-  "mcpServers": {
-    "sonata-stellarswap": {
-      "url": "${MCP_URL}",
-      "type": "http"
-    }
-  }
-}`;
-const LLMS = `# StellarSwap
-
-Soroban AMM + token contract. 14 functions · SEP-48.
-
-## Functions
-balance(id: Address) → i128
-transfer(from, to, amount: i128) → void
-swap(from, sell, buy, amount: i128) → i128
-
-## Types
-SwapRequest { sell, buy, amount: i128 }
-Reserve { token: Address, total: i128 }
-
-## Errors
-1 InsufficientBalance · 2 SlippageExceeded
-
-## Events
-transfer(from, to, amount) · swap(who, sold, bought)`;
-
-const SHORT = CONTRACT_ID.slice(0, 4) + '…D4R';
+import { API_URL } from '@/lib/api';
 
 /* Each doc page: slug, title, intro, sections[]. Blocks: p | code | list | kv */
 export const DOCS = [
   {
     slug: 'overview', title: 'Overview', nav: 'Overview',
-    intro: 'Sonata turns any Soroban contract into a hosted API, an MCP server, AI-ready docs and an indexed event history. Nothing to deploy, no SDK, no custody.',
+    intro: 'Sonata turns any Soroban contract into a hosted API, an MCP server and AI-ready docs. Nothing to deploy, no SDK, no custody.',
     sections: [
       { h: 'What you get', blocks: [
         { list: [
-          'A REST API for every function in the contract, with simulation and unsigned XDR building.',
-          'An MCP server so Claude, Cursor and Codex can read, simulate and build transactions.',
-          'An llms.txt document generated from the SEP-48 spec.',
-          'An indexed, decoded history of events and calls.',
-          'Flows: published recipes that build a whole transaction from a few inputs.'
+          'A REST API for every function in the contract: simulate reads, build unsigned XDR for writes, and submit signed transactions.',
+          'An MCP server per contract, so Claude, Cursor and Codex can read, simulate and build transactions.',
+          'llms.txt and an OpenAPI 3.1 document generated from the contract spec.'
         ] }
       ] },
       { h: 'How it fits together', blocks: [
-        { p: 'You register a contract once. Sonata reads its spec, publishes the four surfaces under a single base URL and keeps the history indexed as new ledgers close.' },
+        { p: 'You register a contract once. Sonata reads its spec and publishes the surfaces above under a single base URL.' },
         { kv: [
-          { key: 'Base URL', value: DEMO_API_URL },
+          { key: 'Base URL', value: API_URL },
           { key: 'Contract path', value: '/c/{contractId}' },
           { key: 'Networks', value: 'testnet · mainnet', mono: false },
-          { key: 'Auth', value: 'None in the preview build', mono: false }
+          { key: 'Auth', value: 'Reads are public; registering and settings need a wallet session', mono: false }
         ] }
       ] },
-      { h: 'Preview build', blocks: [
-        { p: 'This site is a preview. Every number and response you see is sample data and no transaction is sent to the network. The API shapes documented here are the ones the production service will expose.' }
+      { h: 'Ownership', blocks: [
+        { p: 'The wallet that registers a contract owns it: only the owner can rename it, change its MCP scope or refresh it. Anyone can read a contract, simulate its functions, build transactions and submit signed ones.' }
+      ] },
+      { h: 'History', blocks: [
+        { p: "History (decoded events and calls) is not live yet; it arrives with a history provider in a later release." }
       ] }
     ]
   },
@@ -63,59 +34,75 @@ export const DOCS = [
     slug: 'quickstart', title: 'Quickstart', nav: 'Quickstart',
     intro: 'From a contract ID to a working call in about thirty seconds.',
     sections: [
-      { h: '1. Connect and register', blocks: [
-        { p: 'Connect a Freighter wallet, open Contracts and choose Add a contract. Paste the contract ID and pick a network. The pipeline reads the spec, generates the surfaces and indexes history.' }
+      { h: '1. Connect a wallet', blocks: [
+        { p: 'Connect a Freighter, xBull, Albedo or Lobstr wallet from the nav. This opens a session used to register contracts and change their settings.' }
       ] },
-      { h: '2. Make a read call', blocks: [
-        { code: `curl -X POST "${DEMO_API_URL}/c/${SHORT}/call/balance" \\
+      { h: '2. Register', blocks: [
+        { p: 'Paste a contract ID, pick a network and choose Generate. Sonata reads the contract spec and publishes the REST API, MCP server and docs for it.' }
+      ] },
+      { h: '3. Read', blocks: [
+        { code: `curl -X POST "${API_URL}/c/{contractId}/call/{fn}" \\
   -H "Content-Type: application/json" \\
-  -d '{ "args": { "id": "GBX7…4Q9" } }'
+  -d '{ "args": { … } }'
 
-# -> { "result": { "balance": "1250000000" }, "simulated": true }` }
+# -> { "result": …, "simulated": true, "latency_ms": 42, "ledger": 123, "auth": [] }` }
       ] },
-      { h: '3. Build and sign a write', blocks: [
-        { p: 'Write functions return unsigned XDR. Sign it with Freighter or any Stellar signer and submit it yourself, or let the MCP tool hand it to your agent.' },
-        { code: `curl -X POST "${DEMO_API_URL}/c/${SHORT}/tx/transfer" \\
-  -d '{ "args": { "from": "GBX7…4Q9", "to": "GCK2…M8P", "amount": "1250000000" } }'
+      { h: '4. Write', blocks: [
+        { p: 'Build an unsigned transaction with /tx/{fn}, then sign it with the connected wallet using Sign & submit, or sign it with any Stellar signer and submit it yourself.' },
+        { code: `curl -X POST "${API_URL}/c/{contractId}/tx/{fn}" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "args": …, "source": "G…" }'
 
-# -> { "xdr": "AAAAAgAAAADzKF2C…", "fee": "100" }` }
+# -> { "xdr": "AAAAAgAAAADzKF2C…", "fee": "100", "auth": […], "ledger": 123, "expires_at": "2026-09-18T14:32:00Z" }
+
+curl -X POST "${API_URL}/c/{contractId}/submit" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "xdr": "AAAAAgAAAADzKF2C…" }'` }
       ] }
     ]
   },
   {
     slug: 'api', title: 'REST API', nav: 'REST API',
-    intro: 'Every contract function becomes an HTTP endpoint. Reads are simulated; writes return unsigned XDR.',
+    intro: 'Every contract function becomes an HTTP endpoint. Reads are simulated; writes return unsigned XDR for you to sign.',
     sections: [
       { h: 'Endpoints', blocks: [
         { kv: [
-          { key: 'GET /c/{id}', value: 'Contract summary and spec' , mono: false },
-          { key: 'POST /c/{id}/call/{fn}', value: 'Simulate a read function', mono: false },
-          { key: 'POST /c/{id}/tx/{fn}', value: 'Build unsigned XDR for a write', mono: false },
-          { key: 'GET /c/{id}/events', value: 'Decoded events, filterable', mono: false },
+          { key: 'POST /auth/challenge', value: '{address, network} → a SEP-10-style challenge to sign', mono: false },
+          { key: 'POST /auth/token', value: '{transaction, network} → {token, address, expires_at}', mono: false },
+          { key: 'GET /auth/me', value: 'The current session', mono: false },
+          { key: 'POST /contracts', value: 'Register a contract (session required; caller becomes owner)', mono: false },
+          { key: 'GET /contracts', value: 'List contracts; add ?owner=me for the caller’s own (session required)', mono: false },
+          { key: 'GET /c/{id}', value: 'Contract summary and spec', mono: false },
+          { key: 'GET /c/{id}/status', value: 'Registration pipeline status', mono: false },
+          { key: 'PATCH /c/{id}', value: 'Rename or change MCP scope (owner only)', mono: false },
+          { key: 'POST /c/{id}/call/{fn}', value: 'Simulate a function', mono: false },
+          { key: 'POST /c/{id}/tx/{fn}', value: 'Build unsigned XDR for a function', mono: false },
+          { key: 'POST /c/{id}/submit', value: 'Submit a signed transaction', mono: false },
+          { key: 'GET /tx/{hash}?network=', value: 'Look up a submitted transaction', mono: false },
           { key: 'GET /c/{id}/llms.txt', value: 'AI-ready docs', mono: false },
-          { key: 'POST /flows/{slug}/build', value: 'Build a transaction from a flow', mono: false }
+          { key: 'GET /c/{id}/openapi.json', value: 'OpenAPI 3.1 document', mono: false },
+          { key: 'GET /healthz', value: 'Service health', mono: false }
         ] }
       ] },
       { h: 'Request body', blocks: [
-        { p: 'Arguments are passed by name and encoded from the spec types. Addresses are strings, integers are strings to preserve i128 precision.' },
+        { p: 'Arguments are passed by name in "args" and encoded from the contract spec. Integers of 64 bits or wider are decimal strings, bytes are 0x-hex, maps are plain objects, enums are integers, and unions are either the case name as a string or {tag, values}.' },
         { code: `{
   "args": { "from": "G…", "to": "G…", "amount": "1250000000" },
-  "network": "testnet",
   "source": "G…"
 }` }
       ] },
       { h: 'Responses', blocks: [
-        { code: `// read
-{ "result": { "balance": "1250000000" }, "simulated": true, "latency_ms": 42 }
+        { code: `// read (POST /c/{id}/call/{fn})
+{ "result": { "balance": "1250000000" }, "simulated": true, "latency_ms": 42, "ledger": 123, "auth": [] }
 
-// write
-{ "xdr": "AAAAAgAAAADzKF2C…", "fee": "100", "auth": ["from"] }
+// write (POST /c/{id}/tx/{fn})
+{ "xdr": "AAAAAgAAAADzKF2C…", "fee": "100", "auth": ["from"], "ledger": 123, "expires_at": "2026-09-18T14:32:00Z" }
 
 // error
-{ "error": "SlippageExceeded", "code": 2 }` }
+{ "error": "not_owner", "message": "this contract was registered by another wallet", "code": 403, "details": { "owner": "G…" } }` }
       ] },
       { h: 'Authentication and limits', blocks: [
-        { p: 'The preview build needs no authentication. Rate limits and per-key usage arrive with the production release.' }
+        { p: 'Registering a contract or changing its settings needs a session: sign a SEP-10-style challenge with your wallet to get a bearer token valid for 24 hours. Reads, simulation, transaction building and submission need no session. The API allows 120 requests per minute per IP. Stellar Asset Contracts (SACs) are not supported and return sac_unsupported.' }
       ] }
     ]
   },
@@ -125,43 +112,26 @@ export const DOCS = [
     sections: [
       { h: 'Connect', blocks: [
         { p: 'Every contract exposes its own MCP endpoint over HTTP. Paste the config into your client or run the one-liner.' },
-        { code: MCP_CONFIG + `
+        { code: `{
+  "mcpServers": {
+    "sonata-<name>": {
+      "url": "${API_URL}/c/{contractId}/mcp",
+      "type": "http"
+    }
+  }
+}
 
-claude mcp add --transport http sonata-stellarswap ${MCP_URL}` }
+claude mcp add --transport http sonata-<name> ${API_URL}/c/{contractId}/mcp` }
       ] },
       { h: 'Tools', blocks: [
         { kv: [
           { key: 'search_functions', value: 'Find functions by name or purpose', mono: false },
           { key: 'get_docs', value: 'Return llms.txt for the contract', mono: false },
-          { key: 'call_{fn}', value: 'Simulate a read function', mono: false },
-          { key: 'build_{fn}', value: 'Build unsigned XDR for a write', mono: false },
-          { key: 'get_events', value: 'Query decoded history', mono: false }
+          { key: 'call_{fn}', value: 'Simulate a function', mono: false },
+          { key: 'build_{fn}', value: 'Build unsigned XDR for a function (read + write scope)', mono: false },
+          { key: 'submit_transaction', value: 'Submit a signed transaction (read + write scope)', mono: false }
         ] },
-        { p: 'Write tools stay disabled until you switch the scope to Read + write in the workspace. Agents never hold keys: they receive XDR and hand it to a signer.' }
-      ] }
-    ]
-  },
-  {
-    slug: 'history', title: 'History and events', nav: 'History' ,
-    intro: 'Sonata indexes and decodes every event and call from the contract\'s first ledger onward.',
-    sections: [
-      { h: 'Query', blocks: [
-        { code: `GET /c/${SHORT}/events?type=transfer&address=GBX7…4Q9&from=2026-08-01&to=2026-09-09` },
-        { kv: [
-          { key: 'type', value: 'Event name', mono: false },
-          { key: 'address', value: 'Any address in the decoded call', mono: false },
-          { key: 'from / to', value: 'ISO dates or ledger numbers', mono: false },
-          { key: 'format', value: 'json · csv', mono: false }
-        ] }
-      ] },
-      { h: 'Record shape', blocks: [
-        { code: `{
-  "time": "2026-09-09T14:02:11Z",
-  "event": "transfer",
-  "call": "transfer(GBX7…4Q9, GCK2…M8P, 1,250 USDC)",
-  "ledger": 48192044,
-  "status": "success"
-}` }
+        { p: 'Write tools (build_{fn} and submit_transaction) stay disabled until the owner switches the contract’s MCP scope to read + write in the workspace. Agents never hold keys: they receive unsigned XDR and hand it to a signer.' }
       ] }
     ]
   },
@@ -169,9 +139,33 @@ claude mcp add --transport http sonata-stellarswap ${MCP_URL}` }
     slug: 'llms', title: 'llms.txt', nav: 'llms.txt',
     intro: 'A compact Markdown document that describes the contract for language models and people.',
     sections: [
-      { h: 'Example', blocks: [ { code: LLMS } ] },
+      { h: 'Example', blocks: [ { code: `# e2e fixture
+
+Soroban contract · 15 functions · SEP-48 · testnet
+Contract ID: CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP
+
+## Endpoints
+
+Base: https://api.sonata.brages.uk/c/CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP
+POST https://api.sonata.brages.uk/c/CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP/call/{fn}   simulate any function → { result, simulated: true, auth }
+POST https://api.sonata.brages.uk/c/CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP/tx/{fn}     build unsigned XDR → { xdr, fee, auth }
+POST https://api.sonata.brages.uk/c/CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP/submit      relay a signed XDR → { hash, status }
+GET  https://api.sonata.brages.uk/c/CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP/openapi.json
+MCP: https://api.sonata.brages.uk/c/CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP/mcp (Streamable HTTP)
+
+Arguments are passed by name in \`args\`. Integers ≥ 64-bit are decimal strings, bytes are 0x-hex, maps are objects keyed by the map key, enums are integers, unions are "Name" for a void case or {tag, values} otherwise, tuples are arrays, and an Option is the value or null.
+
+\`\`\`
+curl -X POST "https://api.sonata.brages.uk/c/CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP/call/add" -H "Content-Type: application/json" -d '{"args":{"a":"0","b":"0"}}'
+\`\`\`
+
+## Functions
+
+add(a: i128, b: i128) → i128
+  Returns the sum of two i128 values.
+bump() → u32` } ] },
       { h: 'Regeneration', blocks: [
-        { p: 'Docs regenerate whenever the contract spec changes. You can also regenerate on demand from the Docs tab of a contract workspace and add your own notes.' }
+        { p: 'Docs regenerate on every registration and rename.' }
       ] }
     ]
   }

@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@stellar/stellar-sdk": "^17.1.0",
     "@testing-library/react": "^16.3.0",
     "@vitejs/plugin-react": "^6.0.0",
     "jsdom": "^30.0.0",
