@@ -29,8 +29,9 @@ export default function Functions({ S, contract: c, id }) {
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState({});
   const [out, setOut] = useState(null);         // { kind: 'sim'|'build'|'submitted'|'error', body }
-  const pick = (name) => { setSel(name); setValues({}); setErrors({}); setOut(null); };
-  useEffect(() => { setSel(c?.functions?.[0]?.name || null); setValues({}); setErrors({}); setOut(null); setSource(''); }, [c?.id]);
+  const [signErr, setSignErr] = useState(null); // wallet rejection note, kept separate so a failed signature doesn't discard the built XDR in `out`
+  const pick = (name) => { setSel(name); setValues({}); setErrors({}); setOut(null); setSignErr(null); };
+  useEffect(() => { setSel(c?.functions?.[0]?.name || null); setValues({}); setErrors({}); setOut(null); setSignErr(null); setSource(''); }, [c?.id]);
   useEffect(() => { if (mode === 'build' && address && !source) setSource(address); }, [mode, address]);
 
   const run = async () => {
@@ -53,7 +54,7 @@ export default function Functions({ S, contract: c, id }) {
   const signAndSubmit = async () => {
     const { args, errors: e } = coerceArgs(inputs, values);
     if (!isAccountId(source.trim())) e.source = 'A G… account address is required to build a transaction';
-    setErrors(e); setOut(null);
+    setErrors(e); setOut(null); setSignErr(null);
     if (Object.keys(e).length) return;
     setBusy(true);
     try {
@@ -62,7 +63,9 @@ export default function Functions({ S, contract: c, id }) {
       const signed = await wallet.signTransaction(built.xdr, PASSPHRASES[c.network], source.trim());
       setOut({ kind: 'submitted', body: { ...(await contracts.submit(id, signed)), xdr: built.xdr } });
     } catch (err) {
-      if (err?.name === 'WalletError') setOut({ kind: 'error', body: { message: err.code === 'network' ? `Switch your wallet to ${c.network} and try again.` : err.message, error: `wallet_${err.code}` } });
+      // A rejected/failed wallet signature must not discard the built XDR already shown in `out` — surface it
+      // as a note instead of replacing the Unsigned XDR panel with an error panel.
+      if (err?.name === 'WalletError') setSignErr(err.code === 'network' ? `Switch your wallet to ${c.network} and try again.` : err.message);
       else { if (err.error === 'invalid_args' && err.details?.path) setErrors({ [String(err.details.path).split(/[.[]/)[0]]: err.message }); setOut({ kind: 'error', body: err }); }
     } finally { setBusy(false); }
   };
@@ -116,10 +119,11 @@ export default function Functions({ S, contract: c, id }) {
                 placeholder="G…" value={source} onChange={(e) => setSource(e.target.value)} />
             </div>
             <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-              <S.Segmented ariaLabel="Mode" options={MODES} value={mode} onChange={(v) => { setMode(v); setOut(null); setErrors({}); }} />
+              <S.Segmented ariaLabel="Mode" options={MODES} value={mode} onChange={(v) => { setMode(v); setOut(null); setErrors({}); setSignErr(null); }} />
               <S.Button disabled={busy} onClick={run}>{busy ? 'Working…' : mode === 'sim' ? 'Simulate' : 'Build unsigned XDR'}</S.Button>
               {mode === 'build' && address && <S.Button variant="secondary" disabled={busy} onClick={signAndSubmit}>Sign &amp; submit</S.Button>}
             </div>
+            {signErr && <div className="sn-small" style={{ color: 'var(--sn-bad, #b00)', marginTop: 12 }}>{signErr}</div>}
           </div>
           <div>
             {out?.kind === 'sim' && (

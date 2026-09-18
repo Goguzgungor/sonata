@@ -41,4 +41,16 @@ describe('Functions: Sign & submit', () => {
     await waitFor(() => expect(screen.getByText(/abc123/)).toBeTruthy());
     expect(screen.getByText(/4745473/)).toBeTruthy();
   });
+  it('a rejected wallet signature keeps the built XDR visible and shows a note', async () => {
+    setSession({ token: 't', address: G, expires_at: new Date(Date.now() + 60_000).toISOString() });
+    contracts.tx.mockResolvedValue({ xdr: 'AAAA', fee: '100', auth: [G], ledger: 1, expires_at: new Date().toISOString() });
+    wallet.signTransaction.mockRejectedValue(Object.assign(new Error('The wallet request was cancelled.'), { name: 'WalletError', code: 'rejected' }));
+    render(<SessionProvider><Functions S={S} contract={contract} id={contract.id} /></SessionProvider>);
+    fireEvent.click(screen.getByRole('button', { name: 'Build transaction' }));
+    await waitFor(() => expect(screen.getByLabelText('source').value).toBe(G));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign & submit' }));
+    await waitFor(() => expect(screen.getByText('The wallet request was cancelled.')).toBeTruthy());
+    expect(screen.getByText('Unsigned XDR')).toBeTruthy();
+    expect(contracts.submit).not.toHaveBeenCalled();
+  });
 });
