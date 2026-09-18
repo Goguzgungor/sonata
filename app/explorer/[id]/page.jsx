@@ -5,7 +5,7 @@ import { API_URL } from '@/lib/api';
 /** Metadata only: a title/description a minute out of date is fine, and the page itself refetches on the client. */
 async function fetchContract(id) {
   try {
-    const res = await fetch(`${API_URL}/c/${id}`, { signal: AbortSignal.timeout(1500), next: { revalidate: 60 } });
+    const res = await fetch(`${API_URL}/c/${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(1500), next: { revalidate: 60 } });
     if (!res.ok) return null;
     const c = await res.json();
     return c.status === 'ready' ? c : null;

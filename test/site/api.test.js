@@ -51,6 +51,13 @@ describe('api()', () => {
     expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ args: { who: 'G', n: 1 }, source: 'GSRC', timeout_s: 60 });
     expect(fetch.mock.calls[1][0]).toBe(`${API_URL}/c/${ID}/tx/ping`);
   });
+  it('encodes id and fn path segments', async () => {
+    fetch.mockImplementation(() => json(200, {}));
+    await contracts.call(ID, 'weird fn/name', {});
+    expect(fetch.mock.calls[0][0]).toBe(`${API_URL}/c/${ID}/call/weird%20fn%2Fname`);
+    await contracts.get('C/weird?id');
+    expect(fetch.mock.calls[1][0]).toBe(`${API_URL}/c/C%2Fweird%3Fid`);
+  });
   it('200 with non-JSON body becomes ApiError', async () => {
     fetch.mockResolvedValue(new Response('not json', { status: 200 }));
     const err = await api('/x').catch((e) => e);
