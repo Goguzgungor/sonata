@@ -2,9 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { MemoryStore } from '../../src/registry/store.js';
 import { Registry } from '../../src/registry/registry.js';
 import { FakeChain } from '../helpers/fakeChain.js';
+import { StrKey } from '@stellar/stellar-sdk';
 import { FIXTURE_ID, loadFixtureWasm } from '../fixtures/index.js';
 
-const gen = { llmsTxt: (m: any) => `# ${m.id}`, openapi: (m: any) => ({ openapi: '3.1.0', title: m.id }) };
+// Both generators read the *name*, so a regenerate-on-rename is observable in the stored documents.
+const gen = { llmsTxt: (m: any) => `# ${m.name ?? m.id}`, openapi: (m: any) => ({ openapi: '3.1.0', title: m.name ?? m.id }) };
 let chain: FakeChain, reg: Registry, store: MemoryStore;
 beforeEach(() => { chain = new FakeChain(); store = new MemoryStore(); reg = new Registry({ store, chain, gen }); });
 
@@ -21,7 +23,7 @@ describe('Registry.register', () => {
     expect(row.steps.map((s) => [s.name, s.status])).toEqual([['fetch', 'done'], ['parse', 'done'], ['generate', 'done'], ['index', 'skipped']]);
     expect(row.steps[1].detail).toBe('16 functions · 4 types · 2 errors');
     expect(row.model!.functions).toHaveLength(16);
-    expect(row.llmsTxt).toBe(`# ${FIXTURE_ID}`);
+    expect(row.llmsTxt).toBe('# Kitchen');
     expect(row.specXdr!.length).toBeGreaterThan(10);
   });
   it('is idempotent when the wasm hash is unchanged', async () => {
@@ -59,5 +61,49 @@ describe('Registry.register', () => {
   it('learnHint on an unknown contract is a 404, not a store error', async () => {
     await expect(reg.learnHint('CNOPE', 'bump', 'write')).rejects.toMatchObject({ status: 404, error: 'contract_not_found' });
     expect(await store.getHints('CNOPE')).toEqual({});
+  });
+  it('re-registering with a new name and an unchanged wasm hash still regenerates the docs', async () => {
+    await reg.register(FIXTURE_ID, 'testnet', 'Old'); await reg.whenIdle();
+    await reg.register(FIXTURE_ID, 'testnet', 'New'); await reg.whenIdle();
+    const row = (await store.get(FIXTURE_ID))!;
+    expect(row.steps.map((s) => s.detail)).toEqual(['unchanged', 'unchanged', 'unchanged', 'unchanged']);   // the cheap path ran
+    expect(row.name).toBe('New');
+    expect(row.model!.name).toBe('New');
+    expect(row.llmsTxt).toBe('# New');
+    expect((row.openapi as any).title).toBe('New');
+    expect((await reg.ready(FIXTURE_ID)).model.name).toBe('New');   // and the cache is not serving the old model
+  });
+});
+
+describe('Registry.rename', () => {
+  it('rewrites the name in the row, the model and both generated documents', async () => {
+    await reg.register(FIXTURE_ID, 'testnet', 'Old'); await reg.whenIdle();
+    const row = await reg.rename(FIXTURE_ID, 'Renamed');
+    expect(row).toMatchObject({ name: 'Renamed', llmsTxt: '# Renamed' });
+    expect(row.model!.name).toBe('Renamed');
+    expect((row.openapi as any).title).toBe('Renamed');
+    expect((await reg.ready(FIXTURE_ID)).model.name).toBe('Renamed');
+  });
+  it('is a 404 for an unknown contract', async () => {
+    await expect(reg.rename('CNOPE', 'x')).rejects.toMatchObject({ status: 404, error: 'contract_not_found' });
+  });
+});
+
+describe('Registry cache', () => {
+  // The cache held a contract.Spec + model per contract forever; a public registry can hold far more
+  // contracts than fit in memory, so it is a bounded LRU (review finding I7).
+  const idFor = (byte: number) => StrKey.encodeContract(Buffer.alloc(32, byte));
+  it('evicts the least recently used entry past the cap and re-hydrates it from the store', async () => {
+    const small = new Registry({ store, chain, gen }, { cacheMax: 2 });
+    const [a, b, c] = [idFor(1), idFor(2), idFor(3)];
+    for (const id of [a, b, c]) { await small.register(id, 'testnet', id.slice(0, 5)); }
+    await small.whenIdle();
+    const specA = (await small.ready(a)).spec;
+    await small.ready(b);
+    await small.ready(c);                                   // a is now the oldest of three, cap is two
+    const rehydrated = await small.ready(a);
+    expect(rehydrated.spec).not.toBe(specA);                // rebuilt from the stored spec xdr
+    expect(rehydrated.model.functions).toHaveLength(16);
+    expect((await small.ready(a)).spec).toBe(rehydrated.spec);   // and cached again
   });
 });

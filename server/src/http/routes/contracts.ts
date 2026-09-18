@@ -35,11 +35,8 @@ export const contractRoutes = (deps: Deps): FastifyPluginAsync => async (app) =>
   app.patch<{ Params: { id: string } }>('/c/:id', async (req) => {
     const b = PatchBody.parse(req.body);
     const row = await deps.store.get(req.params.id); if (!row) throw notFound('contract', req.params.id);
-    const patch: Record<string, unknown> = {};
-    if (b.name !== undefined) patch.name = b.name;
-    if (b.mcp_scope !== undefined) patch.mcpScope = b.mcp_scope;
-    const updated = await deps.store.update(row.id, patch);
-    if (b.name !== undefined && updated.model) await deps.store.update(row.id, { model: { ...updated.model, name: b.name } });
+    if (b.mcp_scope !== undefined) await deps.store.update(row.id, { mcpScope: b.mcp_scope });
+    if (b.name !== undefined) await deps.registry.rename(row.id, b.name);   // also regenerates llms.txt + openapi
     deps.registry.invalidate(row.id);
     return publicRow((await deps.store.get(row.id))!, base);
   });

@@ -21,9 +21,14 @@ export async function runPipeline(deps: { store: Store; chain: Chain; gen: Gener
     const existing = await store.get(id);
     const wasm = await run(0, async () => { const w = await chain.getContractWasm(network, id); return { value: w, detail: `${(w.length / 1024).toFixed(1)} KB` }; });
     const wasmHash = wasmHashOf(wasm);
-    if (existing?.wasmHash === wasmHash && existing.model && existing.specXdr) {   // unchanged upgrade → nothing to regenerate
+    if (existing?.wasmHash === wasmHash && existing.model && existing.specXdr) {   // unchanged upgrade → nothing to re-parse
       for (const s of steps) { s.status = 'done'; s.detail = 'unchanged'; } steps[3].status = 'skipped';
-      await save({ status: 'ready', error: null }); return;
+      // upsertQueued has already stored a newly supplied name; the model and the generated docs embed
+      // it, so regenerate those even though the wasm itself is unchanged (review finding I9).
+      const renamed = existing.model.name !== existing.name;
+      const model = { ...existing.model, name: existing.name };
+      await save({ status: 'ready', error: null, ...(renamed ? { model, llmsTxt: gen.llmsTxt(model), openapi: gen.openapi(model) } : {}) });
+      return;
     }
     const spec = await run(1, async () => {
       const s = parseWasm(wasm);

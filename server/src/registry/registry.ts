@@ -5,15 +5,33 @@ import { ApiError, badRequest, notFound } from '../errors.js';
 import type { ContractModel, FnKind, Network } from '../types.js';
 import { buildModel } from '../spec/model.js';
 import { runPipeline, type Generators } from './pipeline.js';
-import type { ContractRow, Store } from './store.js';
+import type { ContractRow, RowPatch, Store } from './store.js';
 
 type Cached = { model: ContractModel; spec: contract.Spec; wasmHash: string };
 
+/** Default cache cap. A contract.Spec plus its model is not small, and a public registry can hold far more contracts than fit in memory (review finding I7). */
+const DEFAULT_CACHE_MAX = 256;
+
 export class Registry {
   private queue = new PQueue({ concurrency: 2 });
+  /** Insertion order is recency order: `get` re-inserts, and the oldest key is evicted past the cap. */
   private cache = new Map<string, Cached>();
+  private cacheMax: number;
   private inflight = new Set<string>();
-  constructor(private deps: { store: Store; chain: Chain; gen: Generators }) {}
+  constructor(private deps: { store: Store; chain: Chain; gen: Generators }, opts: { cacheMax?: number } = {}) {
+    this.cacheMax = opts.cacheMax ?? DEFAULT_CACHE_MAX;
+  }
+
+  private cacheGet(id: string): Cached | undefined {
+    const c = this.cache.get(id);
+    if (c) { this.cache.delete(id); this.cache.set(id, c); }
+    return c;
+  }
+  private cacheSet(id: string, c: Cached) {
+    this.cache.delete(id);
+    this.cache.set(id, c);
+    while (this.cache.size > this.cacheMax) this.cache.delete(this.cache.keys().next().value!);
+  }
 
   async register(id: string, network: Network, name: string | null = null): Promise<ContractRow> {
     if (!StrKey.isValidContract(id)) throw badRequest('invalid_contract_id', 'contract id must be a 56-character C… address');
@@ -21,7 +39,9 @@ export class Registry {
     this.cache.delete(id);
     if (!this.inflight.has(id)) {
       this.inflight.add(id);
-      void this.queue.add(() => runPipeline(this.deps, id, network).finally(() => this.inflight.delete(id)));
+      // The pipeline writes a fresh model/docs row; drop the cache entry it may have raced with
+      // (an unchanged wasm hash means ensureCache would otherwise keep serving the old model).
+      void this.queue.add(() => runPipeline(this.deps, id, network).finally(() => { this.inflight.delete(id); this.cache.delete(id); }));
     }
     return row;
   }
@@ -34,12 +54,32 @@ export class Registry {
     const row = await this.deps.store.get(id);
     if (!row) throw notFound('contract', id);
     if (row.status !== 'ready' || !row.model || !row.specXdr) throw new ApiError(409, 'contract_not_ready', `contract is ${row.status}`, { details: { steps: row.steps, error: row.error } });
-    let c = this.cache.get(id);
+    let c = this.cacheGet(id);
     if (!c || c.wasmHash !== row.wasmHash) {
       c = { model: row.model, spec: new contract.Spec(row.specXdr), wasmHash: row.wasmHash! };
-      this.cache.set(id, c);
+      this.cacheSet(id, c);
     }
     return { row, cached: c };
+  }
+
+  /**
+   * Renames a contract and regenerates everything that embeds the name — the model, llms.txt's title
+   * and the OpenAPI `info.title` — so a PATCH cannot leave the generated docs showing the old name
+   * (review finding I9).
+   */
+  async rename(id: string, name: string | null): Promise<ContractRow> {
+    const row = await this.deps.store.get(id);
+    if (!row) throw notFound('contract', id);
+    const patch: RowPatch = { name };
+    if (row.model) {
+      const model = { ...row.model, name };
+      patch.model = model;
+      patch.llmsTxt = this.deps.gen.llmsTxt(model);
+      patch.openapi = this.deps.gen.openapi(model);
+    }
+    const updated = await this.deps.store.update(id, patch);
+    this.cache.delete(id);
+    return updated;
   }
 
   async ready(id: string): Promise<{ row: ContractRow; model: ContractModel; spec: contract.Spec }> {

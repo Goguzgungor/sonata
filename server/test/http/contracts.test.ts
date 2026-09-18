@@ -34,6 +34,22 @@ describe('contracts routes', () => {
     const bad = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { mcp_scope: 'admin' } });
     expect(bad.statusCode).toBe(400);
   });
+  it('PATCH /c/:id regenerates llms.txt and openapi.json with the new name', async () => {
+    const { app, registerFixture } = await testApp(); await registerFixture();
+    const patched = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { name: 'Renamed' } });
+    expect(patched.json()).toMatchObject({ name: 'Renamed' });
+    const llms = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/llms.txt` });
+    expect(llms.body).toMatch(/^# Renamed/);
+    const oa = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/openapi.json` });
+    expect(oa.json().info.title).toContain('Renamed');
+  });
+  it('re-registering with a new name regenerates the docs even though the wasm is unchanged', async () => {
+    const { app, registerFixture, registry } = await testApp(); await registerFixture();
+    await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'Second' } });
+    await registry.whenIdle();
+    expect((await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/llms.txt` })).body).toMatch(/^# Second/);
+    expect((await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/openapi.json` })).json().info.title).toContain('Second');
+  });
   it('POST /contracts is 400 network_not_configured when the network has no RPC configured', async () => {
     const { app } = await testApp({ RPC_URL_MAINNET: undefined });
     const res = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'mainnet' } });
