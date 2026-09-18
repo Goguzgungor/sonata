@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { download } from '@/lib/sonata';
 import { contracts, isAccountId } from '@/lib/api';
 import { inputsOf, fieldKind, placeholderFor, coerceArgs } from '@/lib/args';
@@ -27,6 +27,7 @@ export default function Functions({ S, contract: c, id }) {
   const [errors, setErrors] = useState({});
   const [out, setOut] = useState(null);         // { kind: 'sim'|'build'|'error', body }
   const pick = (name) => { setSel(name); setValues({}); setErrors({}); setOut(null); };
+  useEffect(() => { setSel(c?.functions?.[0]?.name || null); setValues({}); setErrors({}); setOut(null); setSource(''); }, [c?.id]);
 
   const run = async () => {
     const { args, errors: e } = coerceArgs(inputs, values);
@@ -68,13 +69,16 @@ export default function Functions({ S, contract: c, id }) {
               {inputs.map((i) => {
                 const kind = fieldKind(i.schema);
                 if (kind === 'boolean') return (
-                  <label key={i.name} className="sn-small" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <input type="checkbox" checked={!!values[i.name]} onChange={(e) => setValues({ ...values, [i.name]: e.target.checked })} /> {i.name} <span className="sn-muted">bool</span>
-                  </label>
+                  <div key={i.name}>
+                    <label className="sn-small" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <input type="checkbox" checked={!!values[i.name]} onChange={(e) => setValues({ ...values, [i.name]: e.target.checked })} /> {i.name} <span className="sn-muted">bool</span>
+                    </label>
+                    {errors[i.name] && <div className="sn-small" style={{ color: 'var(--sn-bad, #b00)', marginTop: 4 }}>{errors[i.name]}</div>}
+                  </div>
                 );
                 if (kind === 'json') return (
                   <div key={i.name}>
-                    <div className="sn-small" style={{ fontWeight: 700 }}>{i.name} <span className="sn-muted" style={{ fontWeight: 400 }}>{i.type} · JSON</span></div>
+                    <div className="sn-small" style={{ fontWeight: 700 }}>{i.name} <span className="sn-muted" style={{ fontWeight: 400 }}>{i.type} · JSON{i.required ? '' : ' · optional'}</span></div>
                     <textarea className="sn-mono" rows={3} style={{ width: '100%', marginTop: 6, font: 'inherit', fontFamily: 'var(--sn-font-mono)', border: '1px solid var(--sn-ink)', padding: 8, borderColor: errors[i.name] ? 'var(--sn-bad, #b00)' : undefined }}
                       placeholder={placeholderFor(i.schema)} value={values[i.name] || ''} onChange={(e) => setValues({ ...values, [i.name]: e.target.value })} />
                     {errors[i.name] && <div className="sn-small" style={{ color: 'var(--sn-bad, #b00)', marginTop: 4 }}>{errors[i.name]}</div>}
@@ -120,7 +124,7 @@ export default function Functions({ S, contract: c, id }) {
                 <div style={{ marginTop: 16 }}>
                   <S.KeyValueList rows={[
                     { key: 'Fee', value: `${out.body.fee} stroops` },
-                    { key: 'Signers', value: out.body.auth.join(', ') || '—' },
+                    { key: 'Signers', value: (out.body.auth || []).join(', ') || '—' },
                     { key: 'Expires', value: new Date(out.body.expires_at).toLocaleTimeString(), mono: false }
                   ]} />
                 </div>
