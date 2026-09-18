@@ -12,7 +12,7 @@ const COLS = [
 ];
 const SCOPES = [{ value: 'ro', label: 'Read only' }, { value: 'rw', label: 'Read + write' }];
 export const slugOf = (c) => (c.name || shortId(c.id)).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-export const mcpConfig = (c) => JSON.stringify({ mcpServers: { ['sonata-' + slugOf(c)]: { url: c.urls.mcp, type: 'http' } } }, null, 2);
+const mcpConfig = (c) => JSON.stringify({ mcpServers: { ['sonata-' + slugOf(c)]: { url: c.urls.mcp, type: 'http' } } }, null, 2);
 
 export default function Mcp({ S, contract: c, id, refetch, isOwner }) {
   const [scope, setScope] = useState(c?.mcp_scope);

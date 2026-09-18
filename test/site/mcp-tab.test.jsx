@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 vi.mock('@/lib/sonata', () => ({ useSonataUI: () => null, copyText: vi.fn(), download: vi.fn() }));
 import Mcp from '@/components/workspace/Mcp';
-import { API_URL, mcpGlobalUrl, mcpGlobalOneLiner } from '@/lib/api';
+import { mcpGlobalUrl, mcpGlobalOneLiner } from '@/lib/api';
 
 const S = {
   Numeral: () => null,
