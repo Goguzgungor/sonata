@@ -62,7 +62,7 @@ export default function Functions({ S, contract: c, id }) {
             <div className="sn-label sn-muted">Function detail · {fn.kind === 'unknown' ? 'unclassified' : fn.kind}</div>
             <h2 className="sn-h2" style={{ margin: '14px 0 0' }}>{fn.name}</h2>
             {fn.doc && <p className="sn-body sn-muted" style={{ marginTop: 8 }}>{fn.doc}</p>}
-            <div className="sn-mono" style={{ marginTop: 10, overflowWrap: 'anywhere' }}>POST {c.urls.base}/{mode === 'sim' ? 'call' : 'tx'}/{fn.name}</div>
+            <div className="sn-mono" style={{ marginTop: 10, overflowWrap: 'anywhere' }}>POST {contracts.urls(id).base}/{mode === 'sim' ? 'call' : 'tx'}/{fn.name}</div>
             <Label style={{ marginTop: 32 }}>Parameters</Label>
             <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 18 }}>
               {inputs.length === 0 && <div className="sn-small sn-muted">No parameters.</div>}
@@ -131,7 +131,7 @@ export default function Functions({ S, contract: c, id }) {
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   <S.Button variant="secondary" onClick={() => download(`${fn.name}-unsigned.xdr`, out.body.xdr)}>Download XDR</S.Button>
                 </div>
-                <div className="sn-small sn-muted" style={{ marginTop: 12 }}>Sign it with Freighter or any Stellar signer and submit with <span className="sn-mono">POST {c.urls.base}/submit</span>. In-app signing is coming.</div>
+                <div className="sn-small sn-muted" style={{ marginTop: 12 }}>Sign it with Freighter or any Stellar signer and submit with <span className="sn-mono">POST {contracts.urls(id).base}/submit</span>. In-app signing is coming.</div>
               </>
             )}
             {out?.kind === 'error' && (
