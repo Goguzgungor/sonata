@@ -12,8 +12,8 @@ describe('openapi', () => {
   it('is 3.1 with a server and a call + tx path per function', () => {
     expect(doc.openapi).toBe('3.1.0');
     expect(doc.servers).toEqual([{ url: 'https://api.sonata.test' }]);
-    expect(Object.keys(doc.paths).filter((p) => p.includes('/call/'))).toHaveLength(15);
-    expect(Object.keys(doc.paths).filter((p) => p.includes('/tx/'))).toHaveLength(15);
+    expect(Object.keys(doc.paths).filter((p) => p.includes('/call/'))).toHaveLength(16);
+    expect(Object.keys(doc.paths).filter((p) => p.includes('/tx/'))).toHaveLength(16);
     expect(doc.paths[`/c/${FIXTURE_ID}/submit`].post).toBeTruthy();
     expect(doc.paths[`/c/${FIXTURE_ID}/status`].get).toBeTruthy();
     expect(doc.paths[`/c/${FIXTURE_ID}/llms.txt`].get).toBeTruthy();

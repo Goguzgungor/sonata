@@ -29,6 +29,16 @@ pub enum Level {
     High = 2,
 }
 
+/// A nested struct exercising bytes, maps and unions inside a udt.
+#[contracttype]
+#[derive(Clone)]
+pub struct Nested {
+    pub blob: Bytes,
+    pub meta: Map<Symbol, i128>,
+    pub shape: Shape,
+    pub id: BytesN<4>,
+}
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
@@ -65,6 +75,8 @@ impl KitchenSink {
     pub fn echo_pair(_e: Env, p: Pair) -> Pair { p }
     /// Echoes a shape.
     pub fn echo_shape(_e: Env, s: Shape) -> Shape { s }
+    /// Echoes a nested struct.
+    pub fn echo_nested(_e: Env, n: Nested) -> Nested { n }
     /// Echoes a level.
     pub fn echo_level(_e: Env, l: Level) -> Level { l }
     /// Echoes an optional number.

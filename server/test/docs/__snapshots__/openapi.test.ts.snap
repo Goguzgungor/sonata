@@ -31,6 +31,74 @@ exports[`openapi > is stable 1`] = `
         ],
         "type": "integer",
       },
+      "Nested": {
+        "additionalProperties": false,
+        "description": "A nested struct exercising bytes, maps and unions inside a udt.",
+        "properties": {
+          "blob": {
+            "description": "Bytes as 0x-prefixed hex",
+            "pattern": "^0x([0-9a-fA-F]{2})*$",
+            "type": "string",
+          },
+          "id": {
+            "description": "BytesN<4> as 0x-prefixed hex",
+            "maxLength": 10,
+            "minLength": 10,
+            "pattern": "^0x[0-9a-fA-F]{8}$",
+            "type": "string",
+          },
+          "meta": {
+            "additionalProperties": {
+              "description": "i128 as a decimal string",
+              "pattern": "^-?[0-9]+$",
+              "type": "string",
+            },
+            "description": "Map<Symbol, i128> as an object keyed by Symbol",
+            "type": "object",
+          },
+          "shape": {
+            "description": "A shape: either nothing or a boxed value.",
+            "oneOf": [
+              {
+                "const": "Unit",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "tag": {
+                    "const": "Boxed",
+                  },
+                  "values": {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "integer",
+                      },
+                      {
+                        "type": "string",
+                      },
+                    ],
+                    "type": "array",
+                  },
+                },
+                "required": [
+                  "tag",
+                  "values",
+                ],
+                "type": "object",
+              },
+            ],
+          },
+        },
+        "required": [
+          "blob",
+          "id",
+          "meta",
+          "shape",
+        ],
+        "type": "object",
+      },
       "Pair": {
         "additionalProperties": false,
         "description": "A pair of a number and an address.",
@@ -90,7 +158,7 @@ exports[`openapi > is stable 1`] = `
   "info": {
     "description": "Generated from the SEP-48 spec of CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4 on testnet.",
     "title": "KitchenSink — Sonata API",
-    "version": "6cacc285bbf2",
+    "version": "b2864e2c87f0",
   },
   "openapi": "3.1.0",
   "paths": {
@@ -1041,6 +1109,200 @@ exports[`openapi > is stable 1`] = `
           },
         },
         "summary": "Simulate echo_map",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/echo_nested": {
+      "post": {
+        "description": "Echoes a nested struct.",
+        "operationId": "call_echo_nested",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "n": {
+                        "additionalProperties": false,
+                        "description": "A nested struct exercising bytes, maps and unions inside a udt.",
+                        "properties": {
+                          "blob": {
+                            "description": "Bytes as 0x-prefixed hex",
+                            "pattern": "^0x([0-9a-fA-F]{2})*$",
+                            "type": "string",
+                          },
+                          "id": {
+                            "description": "BytesN<4> as 0x-prefixed hex",
+                            "maxLength": 10,
+                            "minLength": 10,
+                            "pattern": "^0x[0-9a-fA-F]{8}$",
+                            "type": "string",
+                          },
+                          "meta": {
+                            "additionalProperties": {
+                              "description": "i128 as a decimal string",
+                              "pattern": "^-?[0-9]+$",
+                              "type": "string",
+                            },
+                            "description": "Map<Symbol, i128> as an object keyed by Symbol",
+                            "type": "object",
+                          },
+                          "shape": {
+                            "description": "A shape: either nothing or a boxed value.",
+                            "oneOf": [
+                              {
+                                "const": "Unit",
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "tag": {
+                                    "const": "Boxed",
+                                  },
+                                  "values": {
+                                    "maxItems": 2,
+                                    "minItems": 2,
+                                    "prefixItems": [
+                                      {
+                                        "type": "integer",
+                                      },
+                                      {
+                                        "type": "string",
+                                      },
+                                    ],
+                                    "type": "array",
+                                  },
+                                },
+                                "required": [
+                                  "tag",
+                                  "values",
+                                ],
+                                "type": "object",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "blob",
+                          "id",
+                          "meta",
+                          "shape",
+                        ],
+                        "type": "object",
+                      },
+                    },
+                    "required": [
+                      "n",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate echo_nested",
         "tags": [
           "call",
         ],
@@ -3274,6 +3536,209 @@ exports[`openapi > is stable 1`] = `
           },
         },
         "summary": "Build unsigned XDR for echo_map",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/echo_nested": {
+      "post": {
+        "description": "Echoes a nested struct.",
+        "operationId": "build_echo_nested",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "n": {
+                        "additionalProperties": false,
+                        "description": "A nested struct exercising bytes, maps and unions inside a udt.",
+                        "properties": {
+                          "blob": {
+                            "description": "Bytes as 0x-prefixed hex",
+                            "pattern": "^0x([0-9a-fA-F]{2})*$",
+                            "type": "string",
+                          },
+                          "id": {
+                            "description": "BytesN<4> as 0x-prefixed hex",
+                            "maxLength": 10,
+                            "minLength": 10,
+                            "pattern": "^0x[0-9a-fA-F]{8}$",
+                            "type": "string",
+                          },
+                          "meta": {
+                            "additionalProperties": {
+                              "description": "i128 as a decimal string",
+                              "pattern": "^-?[0-9]+$",
+                              "type": "string",
+                            },
+                            "description": "Map<Symbol, i128> as an object keyed by Symbol",
+                            "type": "object",
+                          },
+                          "shape": {
+                            "description": "A shape: either nothing or a boxed value.",
+                            "oneOf": [
+                              {
+                                "const": "Unit",
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "tag": {
+                                    "const": "Boxed",
+                                  },
+                                  "values": {
+                                    "maxItems": 2,
+                                    "minItems": 2,
+                                    "prefixItems": [
+                                      {
+                                        "type": "integer",
+                                      },
+                                      {
+                                        "type": "string",
+                                      },
+                                    ],
+                                    "type": "array",
+                                  },
+                                },
+                                "required": [
+                                  "tag",
+                                  "values",
+                                ],
+                                "type": "object",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "blob",
+                          "id",
+                          "meta",
+                          "shape",
+                        ],
+                        "type": "object",
+                      },
+                    },
+                    "required": [
+                      "n",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for echo_nested",
         "tags": [
           "tx",
         ],

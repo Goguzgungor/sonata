@@ -3,7 +3,7 @@
 exports[`llmsTxt > is stable 1`] = `
 "# KitchenSink
 
-Soroban contract · 15 functions · SEP-48 · testnet
+Soroban contract · 16 functions · SEP-48 · testnet
 Contract ID: CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4
 
 ## Endpoints
@@ -53,12 +53,15 @@ echo_level(l: Level) → Level
   Echoes a level.
 echo_shape(s: Shape) → Shape
   Echoes a shape.
+echo_nested(n: Nested) → Nested
+  Echoes a nested struct.
 
 ## Types
 
 Pair (struct) · A pair of a number and an address.
 Level (enum) · A level.
 Shape (union) · A shape: either nothing or a boxed value.
+Nested (struct) · A nested struct exercising bytes, maps and unions inside a udt.
 
 ## Errors
 

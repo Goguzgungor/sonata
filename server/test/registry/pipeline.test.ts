@@ -19,8 +19,8 @@ describe('Registry.register', () => {
     const row = (await store.get(FIXTURE_ID))!;
     expect(row.status).toBe('ready');
     expect(row.steps.map((s) => [s.name, s.status])).toEqual([['fetch', 'done'], ['parse', 'done'], ['generate', 'done'], ['index', 'skipped']]);
-    expect(row.steps[1].detail).toBe('15 functions · 3 types · 2 errors');
-    expect(row.model!.functions).toHaveLength(15);
+    expect(row.steps[1].detail).toBe('16 functions · 4 types · 2 errors');
+    expect(row.model!.functions).toHaveLength(16);
     expect(row.llmsTxt).toBe(`# ${FIXTURE_ID}`);
     expect(row.specXdr!.length).toBeGreaterThan(10);
   });

@@ -24,12 +24,12 @@ describe('buildMcpServer', () => {
   it('read-only lists call_* + search + docs only; rw adds build_* and submit', async () => {
     const ro = await connect('ro');
     const names = (await ro.client.listTools()).tools.map((t) => t.name).sort();
-    expect(names.filter((n) => n.startsWith('call_'))).toHaveLength(15);
+    expect(names.filter((n) => n.startsWith('call_'))).toHaveLength(16);
     expect(names).toContain('search_functions'); expect(names).toContain('get_docs');
     expect(names.some((n) => n.startsWith('build_'))).toBe(false); expect(names).not.toContain('submit_transaction');
     const rw = await connect('rw');
     const rwNames = (await rw.client.listTools()).tools.map((t) => t.name);
-    expect(rwNames.filter((n) => n.startsWith('build_'))).toHaveLength(15); expect(rwNames).toContain('submit_transaction');
+    expect(rwNames.filter((n) => n.startsWith('build_'))).toHaveLength(16); expect(rwNames).toContain('submit_transaction');
   });
   it('tool descriptions carry doc + signature, input schema is the args schema plus source', async () => {
     const { client } = await connect('ro');
@@ -66,7 +66,7 @@ describe('buildMcpServer', () => {
   it('search_functions and get_docs', async () => {
     const { client } = await connect('ro');
     const s = await client.callTool({ name: 'search_functions', arguments: { query: 'echo' } });
-    expect((s.structuredContent as any).functions.map((f: any) => f.name)).toEqual(['echo_bytes', 'echo_hash', 'echo_level', 'echo_map', 'echo_pair', 'echo_shape', 'maybe', 'text', 'tuple']);
+    expect((s.structuredContent as any).functions.map((f: any) => f.name)).toEqual(['echo_bytes', 'echo_hash', 'echo_level', 'echo_map', 'echo_nested', 'echo_pair', 'echo_shape', 'maybe', 'text', 'tuple']);
     const d = await client.callTool({ name: 'get_docs', arguments: {} });
     expect((d.content as any)[0].text).toMatch(/^# KitchenSink/);
     expect((d.structuredContent as any).text).toMatch(/^# KitchenSink/);

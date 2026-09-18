@@ -36,6 +36,59 @@ describe('encode/decode round trips', () => {
   it('decodes void as null', () => {
     expect(decodeResult(spec, 'ping', xdr.ScVal.scvVoid())).toBeNull();
   });
+  it('decodes a Result Ok as the bare ok value', () => {
+    expect(decodeResult(spec, 'checked', xdr.ScVal.scvU32(7))).toBe(7);
+  });
+});
+
+describe('nested udt fields (recursion into struct fields and union case tuples)', () => {
+  // Regression: the SDK's own nativeToStruct/nativeToUnion are not type-directed the way this API
+  // documents — a Bytes field given as 0x-hex would be base64-decoded, a Map field given as an object
+  // rejected, and a union void case given as its bare name rejected. See spec/codec.ts.
+  const unit = { blob: '0xcafe', meta: { a: '1' }, shape: 'Unit', id: '0xdeadbeef' };
+  const boxed = { blob: '0xcafe', meta: { a: '1' }, shape: { tag: 'Boxed', values: [3, 'hi'] }, id: '0xdeadbeef' };
+  it('round-trips bytes, bytesN, map and a union void case inside a struct', () => {
+    expect(rt('echo_nested', { n: unit })).toEqual(unit);
+  });
+  it('round-trips a union tuple case inside a struct', () => {
+    expect(rt('echo_nested', { n: boxed })).toEqual(boxed);
+  });
+  it('encodes the documented hex, not base64, for a nested Bytes field', () => {
+    const scv = encodeArgs(spec, 'echo_nested', { n: unit })[0] as any;   // scvMap of the struct's fields
+    const blob = scv.value.find((e: any) => String(e.key.value) === 'blob').val;
+    expect(blob.type).toBe('scvBytes');
+    expect(Buffer.from(blob.value.value).toString('hex')).toBe('cafe');   // not base64('0xcafe')
+  });
+  it('names the failing nested path', () => {
+    expect(() => encodeArgs(spec, 'echo_nested', { n: { ...unit, blob: 'cafe' } }))
+      .toThrow(expect.objectContaining({ status: 400, extra: { details: { path: 'n.blob' } } }));
+    expect(() => encodeArgs(spec, 'echo_nested', { n: { ...unit, shape: 'Nope' } })).toThrow(/n.shape: unknown case Nope/);
+    const { id, ...missing } = unit;
+    expect(() => encodeArgs(spec, 'echo_nested', { n: missing })).toThrow(/n.id: missing/);
+  });
+  it('stops recursing past MAX_DEPTH (hand-built self-referential spec)', () => {
+    // The fixture has no self-referential type, so the cap is exercised against a spec built here:
+    // `struct Recur { blob: Bytes, next: Option<Recur> }` with `recur(r: Recur) -> Recur`.
+    const udt = xdr.ScSpecTypeDef.scSpecTypeUdt(new xdr.ScSpecTypeUdt({ name: 'Recur' } as any));
+    const entries = [
+      xdr.ScSpecEntry.scSpecEntryUdtStructV0(new xdr.ScSpecUdtStructV0({
+        doc: '', lib: '', name: 'Recur' as any,
+        fields: [
+          new xdr.ScSpecUdtStructFieldV0({ doc: '', name: 'blob' as any, type: xdr.ScSpecTypeDef.scSpecTypeBytes() }),
+          new xdr.ScSpecUdtStructFieldV0({ doc: '', name: 'next' as any, type: xdr.ScSpecTypeDef.scSpecTypeOption(new xdr.ScSpecTypeOption({ valueType: udt })) })
+        ]
+      })),
+      xdr.ScSpecEntry.scSpecEntryFunctionV0(new xdr.ScSpecFunctionV0({
+        doc: '', name: 'recur' as any, inputs: [new xdr.ScSpecFunctionInputV0({ doc: '', name: 'r' as any, type: udt })], outputs: [udt]
+      }))
+    ];
+    const deep = new contract.Spec(entries);
+    const nest = (n: number): any => (n === 0 ? null : { blob: '0xcafe', next: nest(n - 1) });
+    const innermost = (v: any) => { let d = v; while (d?.next) d = d.next; return d.blob; };
+    const run = (n: number) => decodeResult(deep, 'recur', encodeArgs(deep, 'recur', { r: nest(n) })[0]);
+    expect(innermost(run(6))).toBe('0xcafe');                  // within the cap: every level is type-directed
+    expect(innermost(run(7))).not.toBe('0xcafe');              // past it: the value is handed to the SDK untouched
+  });
 });
 
 describe('errors', () => {
