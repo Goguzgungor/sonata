@@ -16,7 +16,8 @@
 - Error envelope `{ error, message, code?, details? }`. New code: `range_out_of_retention` (400, `details: { oldest_ledger, latest_ledger }`). Existing: `contract_not_found` 404, `contract_not_ready` 409, `invalid_args` 400, `rpc_unavailable` 502.
 - Query contract (exact): `type`, `address`, `from`, `to` (ledger integer or ISO-8601), `cursor`, `limit` (1–200, default 50), `format` (`json`|`csv`). Defaults: `to` = latest ledger, `from` = max(oldest, latest − 17 280). Times→ledgers: `ledger = latest − round((latestCloseTime − t) / 5.5)`, clamped to `[oldest, latest]`.
 - Response (exact keys): `{ events: [{ id, ledger, closed_at, tx_hash, successful, event, topics, data, raw: { topic, value }, explorer_url }], page: { cursor, limit, from_ledger, to_ledger }, retention: { oldest_ledger, latest_ledger, latest_ledger_close_time, note } }`; `note` = `RPC history covers the last ~7 days`. CSV columns: `id,ledger,closed_at,tx_hash,successful,event,topics,data` (`topics`/`data` JSON-encoded).
-- `type` → RPC topic filters on topic[0] for every topic count: `[[sym], [sym,'*'], [sym,'*','*'], [sym,'*','*','*']]` where `sym` = base64 XDR of `ScVal.scvSymbol(type)`. `address` is a post-filter over decoded `topics` and `data` (recursively, string equality) within the fetched page.
+- Soroban `#[contractevent]` semantics (verified on the fixture): spec entry `scSpecEntryEventV0` value `{ name: 'Pinged', prefix_topics: ['pinged'], params: [{ name: 'who', location: 'topic_list', type }, { name: 'n', location: 'data', type }], data_format: 'map' | 'vec' | 'single_value' }`; on chain topics = `[...prefix_topics, ...topic_list params]`, data = map keyed by param name (`map`), a vec in param order (`vec`) or the lone value (`single_value`). `type` is resolved against the spec case-insensitively (declared name `Pinged` or prefix topic `pinged` → `pinged`); unknown names pass through verbatim.
+- `type` (resolved symbol) → RPC topic filters on topic[0] for every topic count: `[[sym], [sym,'*'], [sym,'*','*'], [sym,'*','*','*']]` where `sym` = base64 XDR of `ScVal.scvSymbol(type)`. `address` is a post-filter over decoded `topics` and `data` (recursively, string equality) within the fetched page.
 - Cache: in-process LRU (max 500 entries) keyed by the exact `EventQuery`, TTL 10 s; retention cached 60 s per network.
 - MCP tool name `get_events`; tool counts become `N+3` (ro) / `2N+4` (rw) everywhere (site `mcpToolCount`, tests, Playwright).
 - Commit per task, body ending `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`. Never touch `.env*` files.
@@ -60,7 +61,7 @@ import { FIXTURE_ID } from '../fixtures/index.js';
 const cfg = loadConfig({ DATABASE_URL: 'postgres://unused' });
 const sym = (s: string) => xdr.ScVal.scvSymbol(s);
 const ev = (id: string, ledger: number) => ({ id, type: 'contract', ledger, ledgerClosedAt: '2026-09-18T16:13:58Z', transactionIndex: 1, operationIndex: 0, inSuccessfulContractCall: true, txHash: 'ab'.repeat(32), contractId: { contractId: () => FIXTURE_ID }, topic: [sym('pinged'), nativeToScVal('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF', { type: 'address' })], value: nativeToScVal(7, { type: 'u32' }) });
-const page = { events: [ev('0001-1', 100), ev('0002-1', 101)], latestLedger: 200, latestLedgerCloseTime: 1789751923, oldestLedger: 10, oldestLedgerCloseTime: 1789700000, cursor: '0002-1' };
+const page = { events: [ev('0001-1', 100), ev('0002-1', 101)], latestLedger: 200, latestLedgerCloseTime: '1789751923', oldestLedger: 10, oldestLedgerCloseTime: '1789700000', cursor: '0002-1' };
 const source = (server: Record<string, unknown>) => new RpcHistorySource(cfg, () => server as never);
 
 describe('RpcHistorySource', () => {
@@ -122,7 +123,7 @@ import { defaultServerFactory, type ServerFactory } from '../chain/rpc.js';
 import type { EventPage, EventQuery, HistorySource, Retention } from './types.js';
 
 const RETENTION_TTL_MS = 60_000;
-const iso = (unixSeconds: number) => new Date(unixSeconds * 1000).toISOString();
+const iso = (unixSeconds: number | string) => new Date(Number(unixSeconds) * 1000).toISOString();   // SDK types RetentionState.latestLedgerCloseTime as a string of unix seconds
 
 /** v1 history: the network RPC's getEvents. Retention is whatever the RPC keeps (~7 days on public nodes). */
 export class RpcHistorySource implements HistorySource {
@@ -169,7 +170,7 @@ export class RpcHistorySource implements HistorySource {
 }
 ```
 
-(If the SDK's `GetEventsRequest` type rejects `filters: []` for the probe, use `{ type: 'contract' }` with no contractIds. Check `rpc.Api.GetEventsResponse` field names against the installed d.ts — `latestLedgerCloseTime` is a number of unix seconds there.)
+(If the SDK's `GetEventsRequest` type rejects `filters: []` for the probe, use `{ type: 'contract' }` with no contractIds. Check `rpc.Api.GetEventsResponse` field names against the installed d.ts — `RetentionState.latestLedgerCloseTime` is typed `string` (unix seconds) there — always go through `Number()`.)
 
 - [ ] **Step 4: Run** — `npx vitest run test/history/rpc.test.ts && npm run typecheck` → PASS.
 - [ ] **Step 5: Commit** — `git add server/src/history server/src/chain server/test/history && git commit -m "server: HistorySource interface and RPC getEvents adapter" -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"`.
@@ -182,8 +183,8 @@ export class RpcHistorySource implements HistorySource {
 - Create: `server/src/history/query.ts`, `server/src/history/decode.ts`, `server/src/history/csv.ts`, `server/test/history/query.test.ts`, `server/test/history/decode.test.ts`
 
 **Interfaces (produces):**
-- `normaliseQuery(raw: Record<string, unknown>, retention: Retention): { type?: string; address?: string; fromLedger: number; toLedger: number; cursor?: string; limit: number; format: 'json' | 'csv'; topics?: string[][] }` — throws `badRequest('invalid_args', …, { path })`.
-- `decodeEvent(raw: RawEvent, model: ContractModel, network: Network): DecodedEvent` with `DecodedEvent = { id, ledger, closed_at, tx_hash, successful, event: string | null, topics: unknown[], data: unknown, raw: { topic: string[]; value: string }, explorer_url }`.
+- `normaliseQuery(raw: Record<string, unknown>, retention: Retention): { type?: string; address?: string; fromLedger: number; toLedger: number; cursor?: string; limit: number; format: 'json' | 'csv' }` — throws `badRequest('invalid_args', …, { path })`; `topicFilters(symbol: string): string[][]` builds the four topic[0] filters.
+- `resolveTopic(spec: contract.Spec, type: string): string` (declared event name or prefix topic → on-chain symbol; else `type` verbatim); `decodeEvent(raw: RawEvent, spec: contract.Spec, network: Network): DecodedEvent` with `DecodedEvent = { id, ledger, closed_at, tx_hash, successful, event: string | null, topics: unknown[], data: unknown, raw: { topic: string[]; value: string }, explorer_url }`.
 - `matchesAddress(ev: DecodedEvent, address: string): boolean`.
 - `toCsv(events: DecodedEvent[]): string`.
 
@@ -194,7 +195,7 @@ export class RpcHistorySource implements HistorySource {
 ```ts
 import { describe, it, expect } from 'vitest';
 import { xdr } from '@stellar/stellar-sdk';
-import { normaliseQuery } from '../../src/history/query.js';
+import { normaliseQuery, topicFilters } from '../../src/history/query.js';
 
 const ret = { oldestLedger: 1000, latestLedger: 200_000, latestLedgerCloseTime: '2026-09-19T00:00:00.000Z' };
 describe('normaliseQuery', () => {
@@ -215,9 +216,10 @@ describe('normaliseQuery', () => {
   it('range entirely before the window is range_out_of_retention', () => {
     expect(() => normaliseQuery({ from: '10', to: '20' }, ret)).toThrow(expect.objectContaining({ error: 'range_out_of_retention' }));
   });
-  it('type becomes four topic[0] filters', () => {
+  it('topicFilters builds four topic[0] filters for the resolved symbol', () => {
     const sym = xdr.ScVal.scvSymbol('transfer').toXDR('base64');
-    expect(normaliseQuery({ type: 'transfer' }, ret).topics).toEqual([[sym], [sym, '*'], [sym, '*', '*'], [sym, '*', '*', '*']]);
+    expect(topicFilters('transfer')).toEqual([[sym], [sym, '*'], [sym, '*', '*'], [sym, '*', '*', '*']]);
+    expect(normaliseQuery({ type: 'Transfer' }, ret).type).toBe('Transfer');
   });
 });
 ```
@@ -226,37 +228,49 @@ describe('normaliseQuery', () => {
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import { nativeToScVal, xdr } from '@stellar/stellar-sdk';
-import { decodeEvent, matchesAddress } from '../../src/history/decode.js';
+import { contract, nativeToScVal, xdr } from '@stellar/stellar-sdk';
+import { decodeEvent, matchesAddress, resolveTopic } from '../../src/history/decode.js';
 import { toCsv } from '../../src/history/csv.js';
-import { loadFixtureWasm, FIXTURE_ID } from '../fixtures/index.js';
-import { parseWasm, buildModel } from '../../src/spec/model.js';
+import { loadFixtureWasm } from '../fixtures/index.js';
+import { parseWasm } from '../../src/spec/model.js';
 
 const G = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
-const model = buildModel(parseWasm(loadFixtureWasm()), { id: FIXTURE_ID, network: 'testnet', name: 'KS', wasmHash: 'x', specLedger: 0 });
+const spec = parseWasm(loadFixtureWasm());   // declares Pinged { prefix_topics: ['pinged'], who: topic_list, n: data, data_format: map }
+const fakeSpec = (value: Record<string, unknown>) => ({ entries: [{ type: 'scSpecEntryEventV0', value }] }) as unknown as contract.Spec;
 const b64 = (v: xdr.ScVal) => v.toXDR('base64');
 const raw = (topic: xdr.ScVal[], value: xdr.ScVal) => ({ id: '0001-1', ledger: 100, closedAt: '2026-09-18T16:13:58Z', txHash: 'ab'.repeat(32), inSuccessfulContractCall: true, topic: topic.map(b64), value: b64(value) });
+const pinged = () => raw([xdr.ScVal.scvSymbol('pinged'), nativeToScVal(G, { type: 'address' })], nativeToScVal({ n: 7 }, { type: { n: ['symbol', 'u32'] } }));
+
+describe('resolveTopic', () => {
+  it('maps a declared name or prefix topic to the on-chain symbol, else passes through', () => {
+    expect(resolveTopic(spec, 'Pinged')).toBe('pinged'); expect(resolveTopic(spec, 'pinged')).toBe('pinged'); expect(resolveTopic(spec, 'PINGED')).toBe('pinged');
+    expect(resolveTopic(spec, 'transfer')).toBe('transfer');
+  });
+});
 
 describe('decodeEvent', () => {
-  it('names a declared event and maps data onto its non-topic params', () => {
-    // fixture declares Pinged(who: Address, n: u32); Soroban emits topics [ "pinged", who ] and data n
-    const ev = decodeEvent(raw([xdr.ScVal.scvSymbol('pinged'), nativeToScVal(G, { type: 'address' })], nativeToScVal(7, { type: 'u32' })), model, 'testnet');
+  it('decodes topics and map-format data of a declared event', () => {
+    const ev = decodeEvent(pinged(), spec, 'testnet');
     expect(ev).toMatchObject({ event: 'pinged', topics: ['pinged', G], data: { n: 7 }, successful: true, ledger: 100, tx_hash: 'ab'.repeat(32), explorer_url: `https://stellar.expert/explorer/testnet/tx/${'ab'.repeat(32)}` });
     expect(ev.raw.topic).toHaveLength(2);
   });
-  it('undeclared events decode generically; tuples become arrays; failures give data null', () => {
-    const ev = decodeEvent(raw([xdr.ScVal.scvSymbol('swap')], nativeToScVal([1n, 2n], { type: ['i128', 'i128'] })), model, 'mainnet');
-    expect(ev).toMatchObject({ event: 'swap', data: ['1', '2'], explorer_url: expect.stringContaining('/public/tx/') });
-    const bad = decodeEvent({ ...raw([xdr.ScVal.scvSymbol('x')], nativeToScVal(1, { type: 'u32' })), value: 'not-xdr' }, model, 'testnet');
-    expect(bad.data).toBeNull(); expect(bad.event).toBe('x');
+  it('names vec-format and single-value data from the spec params', () => {
+    const vec = fakeSpec({ name: 'Swap', prefix_topics: ['swap'], params: [{ name: 'amount_in', location: 'data', type: 'i128' }, { name: 'amount_out', location: 'data', type: 'i128' }], data_format: 'vec' });
+    expect(decodeEvent(raw([xdr.ScVal.scvSymbol('swap')], nativeToScVal([1n, 2n], { type: ['i128', 'i128'] })), vec, 'mainnet')).toMatchObject({ event: 'swap', data: { amount_in: '1', amount_out: '2' }, explorer_url: expect.stringContaining('/public/tx/') });
+    const single = fakeSpec({ name: 'Minted', prefix_topics: ['minted'], params: [{ name: 'to', location: 'topic_list', type: 'address' }, { name: 'amount', location: 'data', type: 'i128' }], data_format: 'single_value' });
+    expect(decodeEvent(raw([xdr.ScVal.scvSymbol('minted'), nativeToScVal(G, { type: 'address' })], nativeToScVal(5n, { type: 'i128' })), single, 'testnet').data).toEqual({ amount: '5' });
+  });
+  it('undeclared events decode generically; undecodable data gives null', () => {
+    expect(decodeEvent(raw([xdr.ScVal.scvSymbol('burn')], nativeToScVal([1n, 2n], { type: ['i128', 'i128'] })), spec, 'testnet')).toMatchObject({ event: 'burn', data: ['1', '2'] });
+    const bad = decodeEvent({ ...pinged(), value: 'not-xdr' }, spec, 'testnet');
+    expect(bad.data).toBeNull(); expect(bad.event).toBe('pinged');
   });
   it('matchesAddress looks through topics and nested data', () => {
-    const ev = decodeEvent(raw([xdr.ScVal.scvSymbol('pinged'), nativeToScVal(G, { type: 'address' })], nativeToScVal(7, { type: 'u32' })), model, 'testnet');
+    const ev = decodeEvent(pinged(), spec, 'testnet');
     expect(matchesAddress(ev, G)).toBe(true); expect(matchesAddress(ev, 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H')).toBe(false);
   });
   it('toCsv escapes and JSON-encodes topics/data', () => {
-    const ev = decodeEvent(raw([xdr.ScVal.scvSymbol('pinged'), nativeToScVal(G, { type: 'address' })], nativeToScVal(7, { type: 'u32' })), model, 'testnet');
-    const csv = toCsv([ev]);
+    const csv = toCsv([decodeEvent(pinged(), spec, 'testnet')]);
     expect(csv.split('\n')[0]).toBe('id,ledger,closed_at,tx_hash,successful,event,topics,data');
     expect(csv.split('\n')[1]).toContain('"[""pinged"",""' + G + '""]"');
   });
@@ -277,7 +291,9 @@ import type { Retention } from './types.js';
 
 export const DEFAULT_WINDOW_LEDGERS = 17_280;   // ≈ 24 h at 5 s
 export const LEDGER_SECONDS = 5.5;
-export type Normalised = { type?: string; address?: string; fromLedger: number; toLedger: number; cursor?: string; limit: number; format: 'json' | 'csv'; topics?: string[][] };
+export type Normalised = { type?: string; address?: string; fromLedger: number; toLedger: number; cursor?: string; limit: number; format: 'json' | 'csv' };
+/** `type` is matched on topic[0]; the RPC needs one filter per topic count, so cover 1–4 topics with wildcards. */
+export const topicFilters = (symbol: string): string[][] => { const s = xdr.ScVal.scvSymbol(symbol).toXDR('base64'); return [[s], [s, '*'], [s, '*', '*'], [s, '*', '*', '*']]; };
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 function toLedger(v: unknown, path: string, r: Retention): number {
@@ -300,35 +316,43 @@ export function normaliseQuery(raw: Record<string, unknown>, r: Retention): Norm
   if (rawFrom > rawTo) throw badRequest('invalid_args', 'to must not be before from', { path: 'to' });
   if (rawTo < r.oldestLedger) throw rangeOutOfRetention(r.oldestLedger, r.latestLedger);
   const fromLedger = clamp(rawFrom, r.oldestLedger, r.latestLedger), toLedger_ = clamp(rawTo, r.oldestLedger, r.latestLedger);
-  const topics = type ? (() => { const s = xdr.ScVal.scvSymbol(type).toXDR('base64'); return [[s], [s, '*'], [s, '*', '*'], [s, '*', '*', '*']]; })() : undefined;
-  return { type, address, fromLedger, toLedger: toLedger_, cursor: raw.cursor === undefined ? undefined : String(raw.cursor), limit, format, topics };
+  return { type, address, fromLedger, toLedger: toLedger_, cursor: raw.cursor === undefined ? undefined : String(raw.cursor), limit, format };
 }
 ```
 
 `server/src/history/decode.ts`:
 
 ```ts
-import { scValToNative, xdr } from '@stellar/stellar-sdk';
+import { contract, scValToNative, xdr } from '@stellar/stellar-sdk';
 import { toJson } from '../spec/codec.js';
-import type { ContractModel, Network } from '../types.js';
+import type { Network } from '../types.js';
 import type { RawEvent } from './types.js';
 
 export type DecodedEvent = { id: string; ledger: number; closed_at: string; tx_hash: string; successful: boolean; event: string | null; topics: unknown[]; data: unknown; raw: { topic: string[]; value: string }; explorer_url: string };
 
+/** The JSON-ish shape contract.Spec exposes for `#[contractevent]` entries (same access pattern as spec/model.ts). */
+type EventSpec = { name: string; prefix_topics: string[]; params: Array<{ name: string; location: 'topic_list' | 'data'; type: unknown }>; data_format: 'map' | 'vec' | 'single_value' };
+const eventSpecs = (spec: contract.Spec): EventSpec[] =>
+  (spec.entries as unknown as Array<{ type: string; value: EventSpec }>).filter((e) => e.type === 'scSpecEntryEventV0').map((e) => e.value);
+const findEvent = (spec: contract.Spec, symbol: string) => { const k = symbol.toLowerCase(); return eventSpecs(spec).find((e) => e.name.toLowerCase() === k || (e.prefix_topics[0] ?? '').toLowerCase() === k); };
+
+/** `type` as the user typed it (declared name `Pinged`, prefix topic `pinged`, any case) → the on-chain symbol; unknown names pass through unchanged. */
+export const resolveTopic = (spec: contract.Spec, type: string): string => findEvent(spec, type)?.prefix_topics[0] ?? type;
+
 const dec = (b64: string): unknown => toJson(scValToNative(xdr.ScVal.fromXDR(b64, 'base64')));
 const safe = (f: () => unknown): { ok: true; v: unknown } | { ok: false } => { try { return { ok: true, v: f() }; } catch { return { ok: false }; } };
 
-/** Topics → decoded values; data → named by the declared event's non-topic params when the shapes line up, else the plain decoded value, else null. */
-export function decodeEvent(raw: RawEvent, model: ContractModel, network: Network): DecodedEvent {
+/** Topics decoded in order; data named by the declared event's `data` params for vec/single_value formats (map data is already keyed), else the plain decoded value, else null. */
+export function decodeEvent(raw: RawEvent, spec: contract.Spec, network: Network): DecodedEvent {
   const topics = raw.topic.map((t) => { const r = safe(() => dec(t)); return r.ok ? r.v : null; });
   const event = typeof topics[0] === 'string' ? topics[0] : null;
   const value = safe(() => dec(raw.value));
   let data: unknown = value.ok ? value.v : null;
-  const decl = event ? model.events.find((e) => e.name.toLowerCase() === event.toLowerCase()) : undefined;
+  const decl = event ? findEvent(spec, event) : undefined;
   if (decl && value.ok) {
-    const rest = decl.params.slice(Math.max(0, raw.topic.length - 1));   // params not carried as topics
-    if (rest.length === 1) data = { [rest[0].name]: value.v };
-    else if (rest.length > 1 && Array.isArray(value.v) && value.v.length === rest.length) data = Object.fromEntries(rest.map((p, i) => [p.name, (value.v as unknown[])[i]]));
+    const dataParams = decl.params.filter((p) => p.location === 'data');
+    if (decl.data_format === 'single_value' && dataParams.length === 1) data = { [dataParams[0].name]: value.v };
+    else if (decl.data_format === 'vec' && Array.isArray(value.v) && value.v.length === dataParams.length) data = Object.fromEntries(dataParams.map((p, i) => [p.name, (value.v as unknown[])[i]]));
   }
   return { id: raw.id, ledger: raw.ledger, closed_at: raw.closedAt, tx_hash: raw.txHash, successful: raw.inSuccessfulContractCall, event, topics, data, raw: { topic: raw.topic, value: raw.value },
     explorer_url: `https://stellar.expert/explorer/${network === 'mainnet' ? 'public' : 'testnet'}/tx/${raw.txHash}` };
@@ -346,7 +370,7 @@ export const CSV_HEADER = 'id,ledger,closed_at,tx_hash,successful,event,topics,d
 export const toCsv = (events: DecodedEvent[]) => [CSV_HEADER, ...events.map((e) => [e.id, e.ledger, e.closed_at, e.tx_hash, e.successful, e.event ?? '', JSON.stringify(e.topics), JSON.stringify(e.data)].map(cell).join(','))].join('\n');
 ```
 
-- [ ] **Step 4: Run** — `npx vitest run test/history && npm run typecheck` → PASS. (Fixture event `Pinged` params come from `buildModel`; check the exact casing the model stores — the test compares case-insensitively on the topic symbol `pinged`.)
+- [ ] **Step 4: Run** — `npx vitest run test/history && npm run typecheck` → PASS. (If `spec.entries` items are XDR objects rather than the `{ type, value }` JSON form in this SDK build, follow whatever `src/spec/model.ts` does to read `scSpecEntryEventV0` — it is the same access pattern.)
 - [ ] **Step 5: Commit** — `git add server/src/history server/test/history && git commit -m "server: history query normalisation, event decoding, CSV" -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"`.
 
 ---
@@ -361,9 +385,9 @@ export const toCsv = (events: DecodedEvent[]) => [CSV_HEADER, ...events.map((e) 
 - `class HistoryService { constructor(source: HistorySource, registryReady: (id) => Promise<Ready>, opts?: { ttlMs?: number; max?: number }); query(id: string, raw: Record<string, unknown>): Promise<EventsResponse>; csv(id, raw): Promise<string> }` with `EventsResponse = { events: DecodedEvent[]; page: { cursor: string | null; limit: number; from_ledger: number; to_ledger: number }; retention: { oldest_ledger, latest_ledger, latest_ledger_close_time, note } }`.
 - `FakeHistorySource` (test helper): `pages: EventPage[]` consumed in order, `calls` recorded, `retention` fixed `{ oldestLedger: 1000, latestLedger: 200000, latestLedgerCloseTime: '2026-09-19T00:00:00.000Z' }`.
 
-- [ ] **Step 1: Failing tests** — `service.test.ts`: (a) `query` decodes a page and post-filters `address`; (b) identical queries within 10 s hit the source once (`calls.length === 1`), a different `limit` misses; (c) `page.from_ledger` shows the clamp. `events.test.ts` (via `testApp()`, `registerFixture()`, `t.history` = the FakeHistorySource injected by the helper): 200 shape; `?type=pinged` passes four topic filters to the source; `?format=csv` → `text/csv` with the header; `?limit=0` → 400 `invalid_args` path `limit`; unknown id → 404; a queued contract → 409; `?from=10&to=20` → 400 `range_out_of_retention`; source throwing `rpcUnavailable` → 502.
+- [ ] **Step 1: Failing tests** — `service.test.ts`: (a) `query` decodes a page and post-filters `address`; (b) identical queries within 10 s hit the source once (`calls.length === 1`), a different `limit` misses; (c) `page.from_ledger` shows the clamp. `events.test.ts` (via `testApp()`, `registerFixture()`, `t.historySource` = the FakeHistorySource injected by the helper): 200 shape with a `pinged` event decoded as `{ event: 'pinged', topics: ['pinged', OWNER], data: { n: 7 } }`; `?type=Pinged` (declared name, any case) passes the four `pinged` topic filters to the source; `?format=csv` → `text/csv` with the header; `?limit=0` → 400 `invalid_args` path `limit`; unknown id → 404; a queued contract → 409; `?from=10&to=20` → 400 `range_out_of_retention`; source throwing `rpcUnavailable` → 502.
 - [ ] **Step 2: Run to see them fail.**
-- [ ] **Step 3: Implement** — `service.ts` composes `normaliseQuery` → cache lookup (key `JSON.stringify([id, network, fromLedger, toLedger, topics, cursor, limit])`, Map-based LRU: delete+set on hit, evict oldest past `max`) → `source.events(...)` → `decodeEvent` each → `matchesAddress` filter → response. `docs.ts`: `app.get('/c/:id/events', async (req, reply) => { const q = req.query as Record<string, unknown>; if (q.format === 'csv') return reply.type('text/csv; charset=utf-8').header('content-disposition', `attachment; filename="${req.params.id}-events.csv"`).send(await deps.history.csv(req.params.id, q)); return deps.history.query(req.params.id, q); })`. `openapi.ts`: add `/c/{id}/events` GET with the query parameters and a `200` response schema (keep it brief: object with `events` array of objects, `page`, `retention`). `main.ts`: `const history = new HistoryService(new RpcHistorySource(cfg), (id) => registry.ready(id))`; `test/helpers/app.ts`: `new HistoryService(new FakeHistorySource(), (id) => registry.ready(id), { ttlMs: 10_000 })` and return `history` + the fake as `historySource`.
+- [ ] **Step 3: Implement** — `service.ts` composes `registryReady(id)` → `normaliseQuery` → `topics = q.type ? topicFilters(resolveTopic(spec, q.type)) : undefined` → cache lookup (key `JSON.stringify([id, network, fromLedger, toLedger, topics, cursor, limit])`, Map-based LRU: delete+set on hit, evict oldest past `max`) → `source.events(...)` → `decodeEvent(raw, spec, network)` each → `matchesAddress` filter → response. `query(id, raw)` and `csv(id, raw)` share one private `run(id, raw)`. `docs.ts`: `app.get('/c/:id/events', async (req, reply) => { const q = req.query as Record<string, unknown>; if (q.format === 'csv') return reply.type('text/csv; charset=utf-8').header('content-disposition', `attachment; filename="${req.params.id}-events.csv"`).send(await deps.history.csv(req.params.id, q)); return deps.history.query(req.params.id, q); })`. `openapi.ts`: add `/c/{id}/events` GET with the query parameters and a `200` response schema (keep it brief: object with `events` array of objects, `page`, `retention`). `main.ts`: `const history = new HistoryService(new RpcHistorySource(cfg), (id) => registry.ready(id))`; `test/helpers/app.ts`: `new HistoryService(new FakeHistorySource(), (id) => registry.ready(id), { ttlMs: 10_000 })` and return `history` + the fake as `historySource`.
 - [ ] **Step 4: Run** — `npm test && npm run typecheck` → PASS (update the docs.test `events is 501` expectation: it is gone).
 - [ ] **Step 5: Commit** — `server: GET /c/:id/events over the history service`.
 
