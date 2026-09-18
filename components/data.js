@@ -89,10 +89,6 @@ export const TOOL_COLS = [
   { key: 'on', header: 'Enabled', width: '110px', align: 'right' }
 ];
 
-export const WS_TABS = [
-  { id: 'overview', label: 'Overview' }, { id: 'functions', label: 'Functions', count: 14 },
-  { id: 'mcp', label: 'MCP', count: 18 }, { id: 'docs', label: 'Docs' }, { id: 'history', label: 'History', count: '4,920' }
-];
 export const TAB_LABEL = { overview: 'Overview', functions: 'Functions', mcp: 'MCP', docs: 'Docs', history: 'History' };
 export const NET_OPTS = [{ value: 'testnet', label: 'Testnet' }, { value: 'mainnet', label: 'Mainnet' }];
 export const SIM_OPTS = [{ value: 'sim', label: 'Simulate' }, { value: 'build', label: 'Build transaction' }];
