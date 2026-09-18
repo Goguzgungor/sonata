@@ -2,17 +2,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSonataUI } from '@/lib/sonata';
-import { contracts, isContractId } from '@/lib/api';
+import { contracts, isContractId, shortAddr } from '@/lib/api';
 import { usePoll } from '@/lib/useApi';
 import { Label } from '@/components/ui';
 import { PipelineSteps } from '@/components/workspace/Workspace';
 import { NET_OPTS } from '@/components/data';
+import { useSession } from '@/components/SessionProvider';
 
 const DONE = (d) => d.status === 'ready' || d.status === 'failed';
 
 export default function Register({ initialId = '' }) {
   const S = useSonataUI();
   const router = useRouter();
+  const { address, status, signIn } = useSession();
   const [addr, setAddr] = useState(initialId);
   const [name, setName] = useState('');
   const [net, setNet] = useState('testnet');
@@ -26,12 +28,16 @@ export default function Register({ initialId = '' }) {
 
   const generate = async () => {
     setSubmitErr(null); setSubmitting(true); setJob(null);
-    try { const r = await contracts.register(addr.trim(), net, name.trim() || undefined); setJob({ id: r.id, status: r.status, steps: r.steps }); }
-    catch (e) { setSubmitErr(e); }
+    try {
+      if (!address) await signIn();                       // the provider stores the session; the API client picks it up
+      const r = await contracts.register(addr.trim(), net, name.trim() || undefined);
+      setJob({ id: r.id, status: r.status, steps: r.steps });
+    }
+    catch (e) { if (e?.name !== 'WalletError' || e.code !== 'rejected') setSubmitErr(e); }
     finally { setSubmitting(false); }
   };
 
-  const fieldHint = submitErr ? submitErr.message : '56 characters, starts with C';
+  const fieldHint = submitErr && !['not_owner', 'unauthorized'].includes(submitErr.error) ? submitErr.message : '56 characters, starts with C';
   return (
     <main className="page" style={{ maxWidth: 976, gap: 0 }}>
       <h1 className="sn-h1" style={{ margin: 0 }}>Register contract</h1>
@@ -45,11 +51,17 @@ export default function Register({ initialId = '' }) {
           <S.Segmented ariaLabel="Network" options={NET_OPTS} value={net} onChange={(v) => { setNet(v); setSubmitErr(null); }} />
         </div>
         <div className="actions">
-          <S.Button arrow disabled={!valid || submitting} onClick={generate}>{submitting ? 'Submitting…' : 'Generate'}</S.Button>
+          <S.Button arrow disabled={!valid || submitting || status === 'signing'} onClick={generate}>{submitting ? 'Submitting…' : address ? 'Generate' : 'Connect wallet to register'}</S.Button>
           <S.Button variant="secondary" onClick={() => router.push('/contracts')}>Cancel</S.Button>
         </div>
         {submitErr && submitErr.error === 'network_not_configured' && (
           <div className="sn-small sn-muted">Mainnet isn't enabled on this server yet — register on Testnet, or contact the operator.</div>
+        )}
+        {submitErr && submitErr.error === 'not_owner' && (
+          <div className="sn-small sn-muted">This contract was registered by another wallet ({shortAddr(submitErr.details?.owner)}). Only that wallet can refresh or change it.</div>
+        )}
+        {submitErr && submitErr.error === 'unauthorized' && (
+          <div className="sn-small sn-muted">Your session expired — connect your wallet again.</div>
         )}
       </div>
       {st && (

@@ -5,13 +5,15 @@ import { useSonataUI } from '@/lib/sonata';
 import { contracts, shortId, relTime } from '@/lib/api';
 import { useApi } from '@/lib/useApi';
 import Async from '@/components/Async';
+import { useSession } from '@/components/SessionProvider';
 
 const STATUS = { ready: ['good', 'Indexed'], queued: ['warning', 'Indexing'], running: ['warning', 'Indexing'], failed: ['bad', 'Failed'] };
 
 export default function Contracts() {
   const S = useSonataUI();
   const router = useRouter();
-  const { data, error, loading, refetch } = useApi(() => contracts.list(), []);
+  const { address, status, signIn } = useSession();
+  const { data, error, loading, refetch } = useApi((signal) => (address ? contracts.list({ mine: true, signal }) : Promise.resolve(null)), [address]);
   if (!S) return null;
   const list = data || [];
   return (
@@ -23,6 +25,13 @@ export default function Contracts() {
         </div>
         <div className="actions"><S.Button arrow onClick={() => router.push('/register')}>Add a contract</S.Button></div>
       </div>
+      {!address ? (
+        <div style={{ borderTop: '1px solid var(--sn-ink)', padding: '32px 0' }}>
+          <div className="sn-body" style={{ fontWeight: 700 }}>Connect your wallet to see the contracts you registered.</div>
+          <div className="sn-small sn-muted" style={{ marginTop: 8 }}>Anyone can use a registered contract; only the wallet that registered it can change its settings. <Link className="crumb" href="/explorer">Browse all contracts</Link>.</div>
+          <div style={{ marginTop: 16 }}><S.Button arrow disabled={status === 'signing'} onClick={() => signIn().catch(() => {})}>{status === 'signing' ? 'Waiting for wallet…' : 'Connect wallet'}</S.Button></div>
+        </div>
+      ) : (
       <Async S={S} loading={loading} error={error} onRetry={refetch}>
         {list.length === 0 ? (
           <div style={{ borderTop: '1px solid var(--sn-ink)', padding: '32px 0' }}>
@@ -57,6 +66,7 @@ export default function Contracts() {
           </div>
         )}
       </Async>
+      )}
     </main>
   );
 }
