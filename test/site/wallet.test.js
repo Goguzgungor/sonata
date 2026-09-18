@@ -9,6 +9,7 @@ const fakeKit = (over = {}) => ({
   getNetwork: vi.fn().mockResolvedValue({ network: 'PUBLIC', networkPassphrase: PUB }),
   signTransaction: vi.fn().mockResolvedValue({ signedTxXdr: 'SIGNED' }),
   disconnect: vi.fn().mockResolvedValue(undefined),
+  selectedModule: { productId: 'freighter' },
   ...over
 });
 
@@ -18,6 +19,12 @@ describe('wallet', () => {
     const kit = fakeKit(); wallet._setKitForTests(kit);
     expect(await wallet.connect()).toBe('GABC');
     expect(kit.authModal).toHaveBeenCalled();
+    expect(localStorage.getItem('sonata.wallet')).toBe('freighter');
+  });
+  it('falls back to "connected" when the kit has no selected module', async () => {
+    wallet._setKitForTests(fakeKit({ selectedModule: undefined }));
+    await wallet.connect();
+    expect(localStorage.getItem('sonata.wallet')).toBe('connected');
   });
   it('maps the kit network to ours and falls back to testnet', async () => {
     wallet._setKitForTests(fakeKit());
