@@ -43,9 +43,9 @@ export const contractRoutes = (deps: Deps): FastifyPluginAsync => async (app) =>
     if (!deps.cfg.networks[b.network]) return reply.code(400).send({ error: 'network_not_configured', message: `network ${b.network} is not configured on this server` });
     const existing = await deps.store.get(b.id);
     if (existing?.owner && existing.owner !== s.address) throw notOwner(existing.owner);
-    if (existing && !existing.owner) deps.log.info({ id: b.id, address: s.address }, 'legacy contract claimed');
     const row = await deps.registry.register(b.id, b.network, b.name ?? null, s.address);
-    return reply.code(202).send({ id: row.id, network: row.network, status: row.status, steps: row.steps });
+    if (existing && !existing.owner && row.owner === s.address) deps.log.info({ id: b.id, address: s.address }, 'legacy contract claimed');
+    return reply.code(202).send({ id: row.id, network: row.network, status: row.status, steps: row.steps, owner: row.owner });
   });
   app.get<{ Querystring: { owner?: string } }>('/contracts', async (req) => {
     if (req.query.owner === undefined) return (await deps.store.list()).map(listItem);

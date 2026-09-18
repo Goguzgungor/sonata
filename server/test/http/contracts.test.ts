@@ -8,14 +8,14 @@ import { sacUnsupported } from '../../src/chain/errors.js';
 describe('contracts routes', () => {
   it('POST /contracts validates and returns 202 queued; status becomes ready', async () => {
     const { app, registry } = await testApp();
-    const { token } = await signInAs(app, Keypair.random());
+    const { token, address } = await signInAs(app, Keypair.random());
     const bad = await app.inject({ method: 'POST', url: '/contracts', payload: { id: 'nope', network: 'testnet' }, headers: bearer(token) });
     expect(bad.statusCode).toBe(400); expect(bad.json().error).toBe('invalid_contract_id');
     const badNet = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'futurenet' }, headers: bearer(token) });
     expect(badNet.statusCode).toBe(400); expect(badNet.json().error).toBe('invalid_args');
     const res = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'KitchenSink' }, headers: bearer(token) });
     expect(res.statusCode).toBe(202);
-    expect(res.json()).toMatchObject({ id: FIXTURE_ID, network: 'testnet', status: 'queued' });
+    expect(res.json()).toMatchObject({ id: FIXTURE_ID, network: 'testnet', status: 'queued', owner: address });
     await registry.whenIdle();
     const st = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/status` });
     expect(st.json()).toMatchObject({ status: 'ready' });
@@ -112,6 +112,16 @@ describe('contracts routes', () => {
     const dave = await signInAs(app, Keypair.random());
     const daveTry = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { name: 'Nope' }, headers: bearer(dave.token) });
     expect(daveTry.statusCode).toBe(403); expect(daveTry.json()).toMatchObject({ error: 'not_owner', details: { owner: carol.address } });
+  });
+  it('POST /contracts on a legacy (ownerless) row claims it and reports the new owner in the 202 body', async () => {
+    const { app, registry, store } = await testApp();
+    await registry.register(FIXTURE_ID, 'testnet', 'Legacy', null); await registry.whenIdle();
+    expect((await store.get(FIXTURE_ID))!.owner).toBeNull();
+    const erin = await signInAs(app, Keypair.random());
+    const res = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet' }, headers: bearer(erin.token) });
+    expect(res.statusCode).toBe(202);
+    expect(res.json()).toMatchObject({ id: FIXTURE_ID, owner: erin.address });
+    expect((await store.get(FIXTURE_ID))!.owner).toBe(erin.address);
   });
   it('GET /contracts?owner=me lists only the caller\'s contracts and needs a session', async () => {
     const { app, registry } = await testApp();
