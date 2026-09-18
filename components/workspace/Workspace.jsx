@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSonataUI } from '@/lib/sonata';
-import { contracts, shortId, relTime, mcpToolCount } from '@/lib/api';
+import { useSession } from '@/components/SessionProvider';
+import { contracts, shortId, shortAddr, relTime, mcpToolCount } from '@/lib/api';
 import { useApi, usePoll } from '@/lib/useApi';
 import Async from '@/components/Async';
 import NotRegistered from '@/components/NotRegistered';
@@ -51,8 +52,11 @@ function NotReady({ S, id, initial, onReady }) {
 export default function Workspace({ id, tab }) {
   const S = useSonataUI();
   const router = useRouter();
+  const { address } = useSession();
   const t = TAB_LABEL[tab] ? tab : 'overview';
   const { data: contract, error, loading, refetch } = useApi(() => contracts.get(id), [id]);
+  const isOwner = !!address && !!contract && contract.owner === address;
+  const unclaimed = !!contract && !contract.owner;
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState('');
   const [renameErr, setRenameErr] = useState(null);
@@ -110,7 +114,7 @@ export default function Workspace({ id, tab }) {
                 ) : (
                   <h1 className="sn-h1" style={{ margin: 0, display: 'flex', gap: 16, alignItems: 'baseline', flexWrap: 'wrap' }}>
                     {title}
-                    <S.Button variant="text" size="sm" onClick={openRename}>Rename</S.Button>
+                    {isOwner && <S.Button variant="text" size="sm" onClick={openRename}>Rename</S.Button>}
                   </h1>
                 )}
                 <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -118,6 +122,7 @@ export default function Workspace({ id, tab }) {
                   <CopyButton S={S} text={id}>Copy</CopyButton>
                   <S.Chip tone={contract.network === 'mainnet' ? 'inverse' : 'neutral'}>{contract.network === 'mainnet' ? 'Mainnet' : 'Testnet'}</S.Chip>
                   <S.Chip tone={tone}>{label} {relTime(contract.updated_at)}</S.Chip>
+                  {!isOwner && <S.Chip tone="neutral">{unclaimed ? 'Unclaimed' : `Owned by ${shortAddr(contract.owner)}`}</S.Chip>}
                 </div>
               </div>
               <div className="actions">
@@ -128,7 +133,7 @@ export default function Workspace({ id, tab }) {
               <S.Tabs items={tabs} active={t} onChange={(next) => router.push(`/c/${id}/${next}`)} />
             </div>
             {/* keyed by id: switching contracts remounts the tab body instead of carrying its state over */}
-            <Body key={id} S={S} contract={contract} id={id} refetch={refetch} />
+            <Body key={id} S={S} contract={contract} id={id} refetch={refetch} isOwner={isOwner} />
           </>
         )}
       </Async>

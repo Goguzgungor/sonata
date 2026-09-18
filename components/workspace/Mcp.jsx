@@ -14,7 +14,7 @@ const SCOPES = [{ value: 'ro', label: 'Read only' }, { value: 'rw', label: 'Read
 export const slugOf = (c) => (c.name || shortId(c.id)).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 export const mcpConfig = (c) => JSON.stringify({ mcpServers: { ['sonata-' + slugOf(c)]: { url: c.urls.mcp, type: 'http' } } }, null, 2);
 
-export default function Mcp({ S, contract: c, id, refetch }) {
+export default function Mcp({ S, contract: c, id, refetch, isOwner }) {
   const [scope, setScope] = useState(c?.mcp_scope);
   const [err, setErr] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -52,12 +52,16 @@ export default function Mcp({ S, contract: c, id, refetch }) {
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-        {/* the kit's Segmented takes no `disabled` prop, so the wrapper is what blocks input while a PATCH is in flight */}
-        <div aria-busy={saving || undefined} style={saving ? { opacity: 0.55, pointerEvents: 'none' } : undefined}>
-          <S.Segmented ariaLabel="Scope" options={SCOPES} value={scope} onChange={change} />
-        </div>
+        {isOwner ? (
+          // the kit's Segmented takes no `disabled` prop, so the wrapper is what blocks input while a PATCH is in flight
+          <div aria-busy={saving || undefined} style={saving ? { opacity: 0.55, pointerEvents: 'none' } : undefined}>
+            <S.Segmented ariaLabel="Scope" options={SCOPES} value={scope} onChange={change} />
+          </div>
+        ) : (
+          <S.Chip tone={rw ? 'inverse' : 'neutral'}>{rw ? 'Read + write' : 'Read only'}</S.Chip>
+        )}
         <span className="sn-small sn-muted">
-          {saving ? 'Saving…' : err ? `Couldn't change scope: ${err.message}` : rw ? 'Write tools are enabled. Agents can build unsigned transactions and submit signed ones.' : 'Write tools stay disabled until you enable them explicitly. Agents never hold keys.'}
+          {!isOwner ? 'Only the wallet that registered this contract can change the scope.' : saving ? 'Saving…' : err ? `Couldn't change scope: ${err.message}` : rw ? 'Write tools are enabled. Agents can build unsigned transactions and submit signed ones.' : 'Write tools stay disabled until you enable them explicitly. Agents never hold keys.'}
         </span>
       </div>
       <div>
