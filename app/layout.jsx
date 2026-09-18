@@ -1,6 +1,7 @@
 import './globals.css';
 import TopNav from '@/components/TopNav';
 import SiteFooter from '@/components/SiteFooter';
+import { SessionProvider } from '@/components/SessionProvider';
 import { SITE_URL } from '@/components/data';
 import { SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from '@/components/seo';
 
@@ -42,9 +43,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <TopNav />
-        {children}
-        <SiteFooter />
+        <SessionProvider>
+          <TopNav />
+          {children}
+          <SiteFooter />
+        </SessionProvider>
       </body>
     </html>
   );
