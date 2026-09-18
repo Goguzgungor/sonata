@@ -8,17 +8,22 @@ import { runMigrations } from './registry/migrate.js';
 import { llmsTxt } from './docs/llms.js';
 import { openapi } from './docs/openapi.js';
 import { buildApp } from './http/app.js';
+import { loadAuthKeys } from './auth/keys.js';
+import { ChallengeVerifier } from './auth/challenge.js';
 
 const cfg = loadConfig(process.env);
 const log = pino({ level: cfg.logLevel });
 await runMigrations(cfg.databaseUrl);
 const pool = new pg.Pool({ connectionString: cfg.databaseUrl, max: 10 });
 const store = new PgStore(pool);
+const keys = await loadAuthKeys(store, process.env);
+const challenge = { signing: keys.signing, homeDomain: cfg.authHomeDomain, webAuthDomain: new URL(cfg.publicBaseUrl).host };
+const auth = { keys, challenge, verifier: new ChallengeVerifier(challenge) };
 const chain = new RpcChain(cfg);
 const registry = new Registry({ store, chain, gen: { llmsTxt: (m) => llmsTxt(m, cfg), openapi: (m) => openapi(m, cfg) } });
-const app = buildApp({ cfg, chain, registry, store, log });
+const app = buildApp({ cfg, chain, registry, store, log, auth });
 await app.listen({ port: cfg.port, host: '0.0.0.0' });
-log.info({ port: cfg.port, networks: Object.keys(cfg.networks), base: cfg.publicBaseUrl }, 'sonata server up');
+log.info({ port: cfg.port, networks: Object.keys(cfg.networks), base: cfg.publicBaseUrl, homeDomain: cfg.authHomeDomain }, 'sonata server up');
 let closing = false;
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, async () => {
   if (closing) return;
