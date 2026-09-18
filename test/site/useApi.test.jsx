@@ -69,4 +69,13 @@ describe('usePoll', () => {
     expect(result.current.data).toBeNull();          // reset synchronously on restart
     await waitFor(() => expect(result.current.data).toEqual({ n: 2 }));
   });
+  it('backs off while the fetcher keeps failing', async () => {
+    const every = 20;
+    const at = [];
+    renderHook(() => usePoll(async () => { at.push(Date.now()); throw new Error('down'); }, { every, until: () => false }));
+    await waitFor(() => expect(at.length).toBeGreaterThanOrEqual(3), { timeout: 2000 });
+    // delays double per consecutive error: call 2 is ~2× every after call 1, call 3 ~4× after call 2.
+    expect(at[2] - at[1]).toBeGreaterThanOrEqual(4 * every - 5);   // 5 ms of timer slack
+    expect(at[1] - at[0]).toBeLessThan(4 * every - 5);
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { api, ApiError, contracts, API_URL, shortId, isContractId, isAccountId } from '@/lib/api';
+import { api, ApiError, contracts, API_URL, shortId, isContractId, isAccountId, mcpToolCount, relTime } from '@/lib/api';
 
 const ID = 'CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP';
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -76,5 +76,26 @@ describe('helpers', () => {
     expect(shortId(ID)).toBe('CADY…ULTP');
     expect(isContractId(ID)).toBe(true); expect(isContractId('nope')).toBe(false);
     expect(isAccountId('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF')).toBe(true); expect(isAccountId(ID)).toBe(false);
+  });
+  it('mcpToolCount matches the server: N+2 read-only, 2N+3 read+write', () => {
+    const c = (n, mcp_scope) => ({ mcp_scope, functions: Array.from({ length: n }, (_, i) => ({ name: `f${i}` })) });
+    expect(mcpToolCount(c(15, 'ro'))).toBe(17);       // 15 call_* + search_functions + get_docs
+    expect(mcpToolCount(c(15, 'rw'))).toBe(33);       // + 15 build_* + submit_transaction
+    expect(mcpToolCount(c(0, 'ro'))).toBe(2);
+    expect(mcpToolCount(c(0, 'rw'))).toBe(3);
+  });
+  it('relTime crosses just now / m / h / d on the boundary', () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date('2026-09-18T12:00:00Z'));
+    const ago = (s) => new Date(Date.now() - s * 1000).toISOString();
+    expect(relTime(ago(0))).toBe('just now');
+    expect(relTime(ago(59))).toBe('just now');
+    expect(relTime(ago(60))).toBe('1m ago');
+    expect(relTime(ago(3599))).toBe('59m ago');
+    expect(relTime(ago(3600))).toBe('1h ago');
+    expect(relTime(ago(86_399))).toBe('23h ago');
+    expect(relTime(ago(86_400))).toBe('1d ago');
+    expect(relTime(ago(3 * 86_400))).toBe('3d ago');
+    expect(relTime(ago(-30))).toBe('just now');        // a clock ahead of ours clamps to 0
+    vi.useRealTimers();
   });
 });
