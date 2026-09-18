@@ -2503,6 +2503,11 @@ exports[`openapi > is stable 1`] = `
                       "type": "integer",
                     },
                     "result_xdr": {
+                      "description": "TransactionResult (base64), present on success and failure",
+                      "type": "string",
+                    },
+                    "return_value": {
+                      "description": "Returned ScVal (base64), present on success only",
                       "type": "string",
                     },
                     "status": {

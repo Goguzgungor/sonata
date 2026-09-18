@@ -3,6 +3,9 @@ import type { Chain, SimResult, BuiltTx, TxStatus } from '../../src/chain/types.
 import type { Network } from '../../src/types.js';
 import { loadFixtureWasm } from '../fixtures/index.js';
 
+/** A successful submit/getTx result: both XDR fields are distinct so routes cannot conflate them (review finding I6). */
+const DONE = { hash: 'h', status: 'success' as const, ledger: 101, returnValue: 'AAAAAwAAAAo=', resultXdr: 'AAAAAAAAAGQAAAAAAAAAAQ==' };
+
 /** Scripted Chain: every method can be overridden per test via `impl`. Defaults return the fixture wasm and void results. */
 export class FakeChain implements Chain {
   calls: Array<{ method: string; args: unknown[] }> = [];
@@ -19,7 +22,7 @@ export class FakeChain implements Chain {
   buildTx(n: Network, id: string, fn: string, args: xdr.ScVal[], source: string, opts: { fee?: string; timeoutS: number }): Promise<BuiltTx> {
     return this.rec('buildTx', [n, id, fn, args, source, opts], () => ({ xdr: 'AAAA', fee: '100', auth: [source], ledger: 100, expiresAt: '2026-01-01T00:00:00.000Z' }));
   }
-  submit(n: Network, x: string, waitMs: number): Promise<TxStatus> { return this.rec('submit', [n, x, waitMs], () => ({ hash: 'h', status: 'success', ledger: 101 })); }
-  getTx(n: Network, hash: string): Promise<TxStatus> { return this.rec('getTx', [n, hash], () => ({ hash, status: 'success', ledger: 101 })); }
+  submit(n: Network, x: string, waitMs: number): Promise<TxStatus> { return this.rec('submit', [n, x, waitMs], () => ({ ...DONE, hash: 'h' })); }
+  getTx(n: Network, hash: string): Promise<TxStatus> { return this.rec('getTx', [n, hash], () => ({ ...DONE, hash })); }
   health(n: Network) { return this.rec('health', [n], () => 'ok' as const); }
 }

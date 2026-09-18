@@ -6,6 +6,8 @@ export const rpcUnavailable = (network: string, cause: unknown) =>
   new ChainError(502, 'rpc_unavailable', `RPC for ${network} unavailable: ${(cause as Error)?.message ?? String(cause)}`);
 export const networkNotConfigured = (network: string) =>
   new ChainError(400, 'network_not_configured', `network ${network} is not configured on this server`);
+export const contractNotFound = (network: string, id: string) =>
+  new ChainError(404, 'contract_not_found', `contract ${id} does not exist on ${network}`);
 export const sourceNotFound = (source: string) =>
   new ChainError(400, 'source_not_found', `source account ${source} does not exist on this network`);
 

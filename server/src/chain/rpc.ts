@@ -1,21 +1,32 @@
 import { Account, BASE_FEE, Contract, TransactionBuilder, rpc, xdr } from '@stellar/stellar-sdk';
-import type { Config } from '../config.js';
+import type { Config, NetworkConfig } from '../config.js';
 import type { Network } from '../types.js';
 import type { BuiltTx, Chain, SimResult, TxStatus } from './types.js';
-import { ChainError, networkNotConfigured, parseSimulationError, rpcUnavailable, sourceNotFound } from './errors.js';
+import { ChainError, contractNotFound, networkNotConfigured, parseSimulationError, rpcUnavailable, sourceNotFound } from './errors.js';
 import { authAddresses } from './auth.js';
 
 const RPC_TIMEOUT_MS = 10_000;
 
+/** How an rpc.Server is made for a network. Injectable so tests can drive submit()/getContractWasm() against a stub. */
+export type ServerFactory = (n: NetworkConfig) => rpc.Server;
+const defaultServerFactory: ServerFactory = (n) => new rpc.Server(n.rpcUrl, { allowHttp: n.rpcUrl.startsWith('http://'), timeout: RPC_TIMEOUT_MS });
+
+/**
+ * stellar-sdk 17.1 rejects with a PLAIN OBJECT `{ code: 404, message }` — not an Error — when a
+ * contract instance or its wasm ledger entry is missing. Verified against testnet with a valid but
+ * undeployed id: `{ code: 404, message: 'Could not obtain contract instance from server' }`.
+ */
+const isNotFound = (e: unknown) => typeof e === 'object' && e !== null && (e as { code?: unknown }).code === 404;
+
 export class RpcChain implements Chain {
   private servers = new Map<Network, rpc.Server>();
-  constructor(private cfg: Config) {}
+  constructor(private cfg: Config, private makeServer: ServerFactory = defaultServerFactory) {}
 
   private net(network: Network) {
     const n = this.cfg.networks[network];
     if (!n) throw networkNotConfigured(network);
     let s = this.servers.get(network);
-    if (!s) { s = new rpc.Server(n.rpcUrl, { allowHttp: n.rpcUrl.startsWith('http://'), timeout: RPC_TIMEOUT_MS }); this.servers.set(network, s); }
+    if (!s) { s = this.makeServer(n); this.servers.set(network, s); }
     return { server: s, passphrase: n.passphrase };
   }
 
@@ -31,7 +42,10 @@ export class RpcChain implements Chain {
 
   async getContractWasm(network: Network, id: string): Promise<Buffer> {
     const { server } = this.net(network);
-    const wasm = await this.guard(network, () => server.getContractWasmByContractId(id));
+    const wasm = await this.guard(network, async () => {
+      try { return await server.getContractWasmByContractId(id); }
+      catch (e) { throw isNotFound(e) ? contractNotFound(network, id) : e; }   // 404 → a readable 404, not the 502 rpcUnavailable fallback
+    });
     return Buffer.from(wasm);
   }
 
@@ -73,7 +87,7 @@ export class RpcChain implements Chain {
   }
 
   private toStatus(hash: string, r: rpc.Api.GetTransactionResponse): TxStatus {
-    if (r.status === rpc.Api.GetTransactionStatus.SUCCESS) return { hash, status: 'success', ledger: r.ledger, feeCharged: String(r.resultXdr.feeCharged), resultXdr: r.returnValue?.toXdr('base64') };
+    if (r.status === rpc.Api.GetTransactionStatus.SUCCESS) return { hash, status: 'success', ledger: r.ledger, feeCharged: String(r.resultXdr.feeCharged), returnValue: r.returnValue?.toXdr('base64'), resultXdr: r.resultXdr.toXdr('base64') };
     if (r.status === rpc.Api.GetTransactionStatus.FAILED) return { hash, status: 'failed', ledger: r.ledger, resultXdr: r.resultXdr.toXdr('base64') };
     return { hash, status: 'pending' };
   }
@@ -81,9 +95,12 @@ export class RpcChain implements Chain {
   async submit(network: Network, xdrB64: string, waitMs: number): Promise<TxStatus> {
     const { server, passphrase } = this.net(network);
     let tx; try { tx = TransactionBuilder.fromXdr(xdrB64, passphrase); } catch { throw new ChainError(400, 'invalid_xdr', 'xdr is not a valid transaction envelope for this network'); }
-    const sent = await this.guard(network, () => server.sendTransaction(tx));
-    if (sent.status === 'ERROR' || sent.status === 'DUPLICATE' || sent.status === 'TRY_AGAIN_LATER')
+    // Never retry sendTransaction: a retried submit risks double-submitting a signed transaction.
+    const sent = await this.guard(network, () => server.sendTransaction(tx), false);
+    if (sent.status === 'ERROR')
       throw new ChainError(422, 'submit_rejected', `transaction rejected: ${sent.status}`, { details: { errorResult: sent.errorResult?.toXdr('base64') } });
+    // DUPLICATE (already submitted) and TRY_AGAIN_LATER (queued behind an earlier one) are not
+    // rejections — the transaction is or may be in flight, so poll for its real outcome.
     const deadline = Date.now() + waitMs;
     let last: TxStatus = { hash: sent.hash, status: 'pending' };
     while (Date.now() < deadline) {

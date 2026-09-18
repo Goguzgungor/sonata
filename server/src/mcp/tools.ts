@@ -16,7 +16,7 @@ const withSource = (s: JsonSchema, required: boolean): JsonSchema => {
 };
 const CALL_OUT: JsonSchema = { type: 'object', properties: { result: {}, simulated: { type: 'boolean' }, latency_ms: { type: 'integer' }, ledger: { type: 'integer' }, auth: { type: 'array', items: { type: 'string' } } }, required: ['result', 'simulated'] };
 const BUILD_OUT: JsonSchema = { type: 'object', properties: { xdr: { type: 'string' }, fee: { type: 'string' }, auth: { type: 'array', items: { type: 'string' } }, ledger: { type: 'integer' }, expires_at: { type: 'string' } }, required: ['xdr'] };
-const TX_OUT: JsonSchema = { type: 'object', properties: { hash: { type: 'string' }, status: { type: 'string' }, ledger: { type: 'integer' }, fee_charged: { type: 'string' }, result_xdr: { type: 'string' } }, required: ['hash', 'status'] };
+const TX_OUT: JsonSchema = { type: 'object', properties: { hash: { type: 'string' }, status: { type: 'string' }, ledger: { type: 'integer' }, fee_charged: { type: 'string' }, return_value: { type: 'string', description: 'Returned ScVal (base64), on success only' }, result_xdr: { type: 'string', description: 'TransactionResult (base64)' } }, required: ['hash', 'status'] };
 const DOCS_OUT: JsonSchema = { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] };
 
 const ok = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data) }], structuredContent: data as Record<string, unknown> });
@@ -62,7 +62,7 @@ export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope:
       async ({ xdr }) => {
         try {
           const t = await chain.submit(model.network, xdr, 30_000);
-          return ok({ hash: t.hash, status: t.status, ...(t.ledger !== undefined && { ledger: t.ledger }), ...(t.feeCharged && { fee_charged: t.feeCharged }), ...(t.resultXdr && { result_xdr: t.resultXdr }) });
+          return ok({ hash: t.hash, status: t.status, ...(t.ledger !== undefined && { ledger: t.ledger }), ...(t.feeCharged && { fee_charged: t.feeCharged }), ...(t.returnValue && { return_value: t.returnValue }), ...(t.resultXdr && { result_xdr: t.resultXdr }) });
         } catch (e) {
           try { namedContractError(e, model, spec); } catch (named) { return fail(named); }
         }

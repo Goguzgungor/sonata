@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import type { Deps } from '../deps.js';
+import type { TxStatus } from '../../chain/types.js';
 import { badRequest, notFound } from '../../errors.js';
 import { decodeResult, encodeArgs, namedContractError } from '../../spec/codec.js';
 
@@ -40,8 +41,9 @@ export const invokeRoutes = (deps: Deps): FastifyPluginAsync => async (app) => {
     return { xdr: built.xdr, fee: built.fee, auth: built.auth, ledger: built.ledger, expires_at: built.expiresAt };
   });
 
-  const txJson = (t: { hash: string; status: string; ledger?: number; feeCharged?: string; resultXdr?: string }) =>
-    ({ hash: t.hash, status: t.status, ...(t.ledger !== undefined && { ledger: t.ledger }), ...(t.feeCharged && { fee_charged: t.feeCharged }), ...(t.resultXdr && { result_xdr: t.resultXdr }) });
+  const txJson = (t: TxStatus) =>
+    ({ hash: t.hash, status: t.status, ...(t.ledger !== undefined && { ledger: t.ledger }), ...(t.feeCharged && { fee_charged: t.feeCharged }),
+      ...(t.returnValue && { return_value: t.returnValue }), ...(t.resultXdr && { result_xdr: t.resultXdr }) });
 
   app.post<{ Params: { id: string } }>('/c/:id/submit', async (req) => {
     const b = SubmitBody.parse(req.body);

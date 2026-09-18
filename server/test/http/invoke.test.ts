@@ -65,10 +65,11 @@ describe('POST /tx, /submit, GET /tx', () => {
   });
   it('submit waits and returns status; GET /tx polls', async () => {
     const { app, registerFixture } = await testApp(); await registerFixture();
+    const done = { hash: 'h', status: 'success', ledger: 101, return_value: 'AAAAAwAAAAo=', result_xdr: 'AAAAAAAAAGQAAAAAAAAAAQ==' };
     const s = await app.inject({ method: 'POST', url: `/c/${FIXTURE_ID}/submit`, payload: { xdr: 'AAAA' } });
-    expect(s.json()).toEqual({ hash: 'h', status: 'success', ledger: 101 });
+    expect(s.json()).toEqual(done);   // return_value (the ScVal) and result_xdr (the TransactionResult) are separate fields
     const g = await app.inject({ method: 'GET', url: '/tx/h?network=testnet' });
-    expect(g.json()).toEqual({ hash: 'h', status: 'success', ledger: 101 });
+    expect(g.json()).toEqual(done);
     expect((await app.inject({ method: 'GET', url: '/tx/h' })).statusCode).toBe(400);
   });
 });
