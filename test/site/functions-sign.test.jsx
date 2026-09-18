@@ -13,7 +13,7 @@ const S = {
   Button: ({ children, onClick, disabled }) => <button onClick={onClick} disabled={disabled}>{children}</button>,
   Field: ({ label, value, onChange }) => <label>{label}<input aria-label={label} value={value || ''} onChange={onChange} /></label>,
   Segmented: ({ options, value, onChange }) => <div>{options.map((o) => <button key={o.value} aria-pressed={o.value === value} onClick={() => onChange(o.value)}>{o.label}</button>)}</div>,
-  Numeral: () => null, Chip: ({ children }) => <span>{children}</span>, KeyValueList: ({ rows }) => <dl>{rows.map((r) => <div key={r.key}>{r.key}: {typeof r.value === 'string' ? r.value : ''}</div>)}</dl>,
+  Numeral: () => null, Chip: ({ children }) => <span>{children}</span>, KeyValueList: ({ rows }) => <dl>{rows.map((r) => <div key={r.key}>{r.key}: {r.value}</div>)}</dl>,
   DataTable: () => null // rt-desktop is rendered alongside rt-mobile in jsdom (no real CSS), so a stub keeps the table mountable
 };
 const contract = { id: 'CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP', network: 'testnet', functions: [{ name: 'bump', doc: '', inputs: [], output: 'u32', kind: 'unknown', jsonSchema: { type: 'object', properties: {}, required: [] } }] };
@@ -40,6 +40,9 @@ describe('Functions: Sign & submit', () => {
     expect(wallet.signTransaction).toHaveBeenCalledWith('AAAA', PASSPHRASES.testnet, G);
     await waitFor(() => expect(screen.getByText(/abc123/)).toBeTruthy());
     expect(screen.getByText(/4745473/)).toBeTruthy();
+    const link = screen.getByRole('link', { name: /abc123/ });
+    expect(link.getAttribute('href')).toBe('https://stellar.expert/explorer/testnet/tx/abc123');
+    expect(link.getAttribute('target')).toBe('_blank');
   });
   it('a rejected wallet signature keeps the built XDR visible and shows a note', async () => {
     setSession({ token: 't', address: G, expires_at: new Date(Date.now() + 60_000).toISOString() });
@@ -52,5 +55,7 @@ describe('Functions: Sign & submit', () => {
     await waitFor(() => expect(screen.getByText('The wallet request was cancelled.')).toBeTruthy());
     expect(screen.getByText('Unsigned XDR')).toBeTruthy();
     expect(contracts.submit).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Build unsigned XDR' }));
+    await waitFor(() => expect(screen.queryByText('The wallet request was cancelled.')).toBeNull());
   });
 });

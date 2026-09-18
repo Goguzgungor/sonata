@@ -12,7 +12,7 @@ const PatchBody = z.object({ name: z.string().min(1).max(80).nullable().optional
 export const publicRow = (row: ContractRow, base: string) => ({
   ...(row.model ?? { id: row.id, network: row.network, name: row.name }),
   name: row.name, owner: row.owner, mcp_scope: row.mcpScope, status: row.status, steps: row.steps, error: row.error,
-  urls: { mcp: `${base}/c/${row.id}/mcp`, llms: `${base}/c/${row.id}/llms.txt`, openapi: `${base}/c/${row.id}/openapi.json` },
+  urls: { mcp: `${base}/c/${row.id}/mcp`, llms: `${base}/c/${row.id}/llms.txt`, openapi: `${base}/c/${row.id}/openapi.json`, explorer: `https://stellar.expert/explorer/${row.network === 'mainnet' ? 'public' : 'testnet'}/contract/${row.id}` },
   created_at: row.createdAt.toISOString(), updated_at: row.updatedAt.toISOString()
 });
 

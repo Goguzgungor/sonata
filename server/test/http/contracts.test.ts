@@ -37,7 +37,7 @@ describe('contracts routes', () => {
     expect(list.json()).toEqual([{ id: FIXTURE_ID, name: 'KitchenSink', network: 'testnet', status: 'ready', fns: 16, owner: OWNER, created_at: expect.any(String), updated_at: expect.any(String) }]);
     const one = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}` });
     expect(one.statusCode).toBe(200);
-    expect(one.json()).toMatchObject({ id: FIXTURE_ID, mcp_scope: 'ro', status: 'ready', urls: { mcp: `https://api.sonata.test/c/${FIXTURE_ID}/mcp`, llms: `https://api.sonata.test/c/${FIXTURE_ID}/llms.txt`, openapi: `https://api.sonata.test/c/${FIXTURE_ID}/openapi.json` } });
+    expect(one.json()).toMatchObject({ id: FIXTURE_ID, mcp_scope: 'ro', status: 'ready', urls: { mcp: `https://api.sonata.test/c/${FIXTURE_ID}/mcp`, llms: `https://api.sonata.test/c/${FIXTURE_ID}/llms.txt`, openapi: `https://api.sonata.test/c/${FIXTURE_ID}/openapi.json`, explorer: `https://stellar.expert/explorer/testnet/contract/${FIXTURE_ID}` } });
     expect(one.json().functions).toHaveLength(16);
     expect((await app.inject({ method: 'GET', url: '/c/CNOPE' })).statusCode).toBe(404);
   });

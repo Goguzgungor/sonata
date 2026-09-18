@@ -26,7 +26,7 @@ Base URL `PUBLIC_BASE_URL` (prod: `https://api.sonata.brages.uk`). JSON everywhe
 | `GET /auth/me` | Whoami for the bearer token | `200 {address, expires_at}` |
 | `POST /contracts` `{id, network, name?}` | Register / re-check — session required (owner) | `202 {id, network, status, steps}` |
 | `GET /contracts` `?owner=me` | Registered list, or just the caller's (`?owner=me` needs a session) | `200 [{id, name, network, status, fns, owner, created_at, updated_at}]` |
-| `GET /c/:id` | Model + settings | `200 {…ContractModel, mcp_scope, status, urls: {mcp, llms, openapi}}` |
+| `GET /c/:id` | Model + settings | `200 {…ContractModel, mcp_scope, status, urls: {mcp, llms, openapi, explorer}}` |
 | `GET /c/:id/status` | Pipeline steps | `200 {status, steps, error?}` |
 | `PATCH /c/:id` `{name?, mcp_scope?}` | Settings — session required (owner) | `200 {…same as GET}` |
 | `POST /c/:id/call/:fn` `{args, source?, network?}` | Simulate any function | `200 {result, simulated: true, latency_ms, ledger, auth: string[]}` |

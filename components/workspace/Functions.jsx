@@ -6,6 +6,7 @@ import { contracts, isAccountId, PASSPHRASES } from '@/lib/api';
 import { useSession } from '@/components/SessionProvider';
 import { inputsOf, fieldKind, placeholderFor, coerceArgs } from '@/lib/args';
 import { Label, CodeBox, CopyButton, ResponsiveTable } from '@/components/ui';
+import { expertUrl } from '@/lib/expert';
 
 const COLS = [
   { key: 'num', header: '', width: '56px' },
@@ -38,7 +39,7 @@ export default function Functions({ S, contract: c, id }) {
     const { args, errors: e } = coerceArgs(inputs, values);
     if (mode === 'build' && !isAccountId(source.trim())) e.source = 'A G… account address is required to build a transaction';
     if (mode === 'sim' && source.trim() && !isAccountId(source.trim())) e.source = 'Must be a G… account address';
-    setErrors(e); setOut(null);
+    setErrors(e); setOut(null); setSignErr(null);
     if (Object.keys(e).length) return;
     setBusy(true);
     try {
@@ -167,7 +168,7 @@ export default function Functions({ S, contract: c, id }) {
                 <div style={{ marginTop: 14 }}>
                   <S.KeyValueList rows={[
                     { key: 'Status', value: out.body.status, mono: false },
-                    { key: 'Hash', value: out.body.hash },
+                    { key: 'Hash', value: <a className="crumb" href={expertUrl(c.network, 'tx', out.body.hash)} target="_blank" rel="noreferrer">{out.body.hash}</a> },
                     { key: 'Ledger', value: out.body.ledger !== undefined ? String(out.body.ledger) : '—' },
                     ...(out.body.fee_charged ? [{ key: 'Fee charged', value: `${out.body.fee_charged} stroops` }] : [])
                   ]} />

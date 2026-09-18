@@ -7,6 +7,7 @@ import { useApi } from '@/lib/useApi';
 import Async from '@/components/Async';
 import NotRegistered from '@/components/NotRegistered';
 import { Label, CodeBox, CopyButton, ResponsiveTable } from '@/components/ui';
+import { expertUrl } from '@/lib/expert';
 import { mcpConfig } from '@/components/workspace/Mcp';
 import { PipelineSteps, STATUS } from '@/components/workspace/Workspace';
 
@@ -28,6 +29,7 @@ function Live({ S, c, router }) {
           <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <span className="sn-mono" style={{ overflowWrap: 'anywhere' }}>{c.id}</span>
             <CopyButton S={S} text={c.id}>Copy</CopyButton>
+            <a className="crumb" href={expertUrl(c.network, 'contract', c.id)} target="_blank" rel="noreferrer">Stellar Expert ↗</a>
             <S.Chip tone={c.network === 'mainnet' ? 'inverse' : 'neutral'}>{c.network === 'mainnet' ? 'Mainnet' : 'Testnet'}</S.Chip>
           </div>
         </div>
@@ -47,7 +49,7 @@ function Live({ S, c, router }) {
           <Label style={{ marginBottom: 16 }}>About</Label>
           <S.KeyValueList rows={[
             { key: 'Network', value: c.network, mono: false },
-            { key: 'Owner', value: c.owner ? shortAddr(c.owner) : 'unclaimed', mono: !!c.owner },
+            { key: 'Owner', value: c.owner ? <a className="crumb" href={expertUrl(c.network, 'account', c.owner)} target="_blank" rel="noreferrer">{shortAddr(c.owner)}</a> : 'unclaimed', mono: !!c.owner },
             { key: 'Spec', value: 'SEP-48' },
             { key: 'AI docs', value: <a className="crumb" href={c.urls.llms} target="_blank" rel="noreferrer">llms.txt</a> },
             { key: 'OpenAPI', value: <a className="crumb" href={c.urls.openapi} target="_blank" rel="noreferrer">openapi.json</a> },
