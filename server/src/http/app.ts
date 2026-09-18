@@ -8,6 +8,7 @@ import { contractRoutes } from './routes/contracts.js';
 import { invokeRoutes } from './routes/invoke.js';
 import { docsRoutes } from './routes/docs.js';
 import { healthRoutes } from './routes/health.js';
+import { registerMcp } from '../mcp/route.js';
 
 export function buildApp(deps: Deps) {
   const app = Fastify({ loggerInstance: deps.log, genReqId: () => crypto.randomUUID(), bodyLimit: 1_000_000 });
@@ -26,5 +27,6 @@ export function buildApp(deps: Deps) {
   app.register(invokeRoutes(deps));
   app.register(docsRoutes(deps));
   app.register(healthRoutes(deps));
+  registerMcp(app, deps);
   return app;
 }

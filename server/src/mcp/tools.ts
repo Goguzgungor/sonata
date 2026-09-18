@@ -1,0 +1,101 @@
+import { McpServer, fromJsonSchema } from '@modelcontextprotocol/server';
+import type { contract } from '@stellar/stellar-sdk';
+import { ApiError } from '../errors.js';
+import type { Deps } from '../http/deps.js';
+import { decodeResult, encodeArgs, namedContractError } from '../spec/codec.js';
+import type { ContractModel, JsonSchema, McpScope } from '../types.js';
+import { shortId } from '../docs/llms.js';
+
+const MAX_NAME = 64;
+const toolName = (prefix: string, fn: string) => `${prefix}${fn}`.slice(0, MAX_NAME);
+const sig = (f: ContractModel['functions'][number]) => `${f.name}(${f.inputs.map((i) => `${i.name}: ${i.type}`).join(', ')}) → ${f.output}`;
+
+/**
+ * fromJsonSchema (ajv, JSON Schema 2020-12) rejects the draft-07 array form of `items`
+ * (tuple validation) with "items value must be [\"object\",\"boolean\"]" — confirmed against
+ * this package's actual fromJsonSchema, not assumed. spec/schema.ts (Task 3, shared with
+ * OpenAPI where the draft-07 form is valid) emits that form for tuple types and tuple-shaped
+ * union cases (e.g. `tuple(t: (u32, bool))`, `Shape::Boxed(u32, Symbol)` in the kitchen-sink
+ * fixture). Translate it losslessly to 2020-12's `prefixItems` here, at the MCP boundary only.
+ */
+function toAjvSchema(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(toAjvSchema);
+  if (!node || typeof node !== 'object') return node;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+    if (k === 'items' && Array.isArray(v)) { out.prefixItems = v.map(toAjvSchema); out.items = false; }
+    else out[k] = toAjvSchema(v);
+  }
+  return out;
+}
+const ajvSafe = (s: JsonSchema): JsonSchema => toAjvSchema(s) as JsonSchema;
+
+const withSource = (s: JsonSchema, required: boolean): JsonSchema => {
+  const props = { ...(s.properties as object), source: { type: 'string', description: 'G… account used as transaction source' } };
+  const req = [...((s.required as string[]) ?? []), ...(required ? ['source'] : [])];
+  return { type: 'object', properties: props, ...(req.length ? { required: req } : {}), additionalProperties: false };
+};
+const CALL_OUT: JsonSchema = { type: 'object', properties: { result: {}, simulated: { type: 'boolean' }, latency_ms: { type: 'integer' }, ledger: { type: 'integer' }, auth: { type: 'array', items: { type: 'string' } } }, required: ['result', 'simulated'] };
+const BUILD_OUT: JsonSchema = { type: 'object', properties: { xdr: { type: 'string' }, fee: { type: 'string' }, auth: { type: 'array', items: { type: 'string' } }, ledger: { type: 'integer' }, expires_at: { type: 'string' } }, required: ['xdr'] };
+const TX_OUT: JsonSchema = { type: 'object', properties: { hash: { type: 'string' }, status: { type: 'string' }, ledger: { type: 'integer' }, fee_charged: { type: 'string' }, result_xdr: { type: 'string' } }, required: ['hash', 'status'] };
+
+const ok = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data) }], structuredContent: data as Record<string, unknown> });
+/** Serializes an already-named error. Ruling: contract-error → spec-name renaming lives once, in
+ * spec/codec.ts's namedContractError; callers rethrow through it and hand the renamed error here. */
+const fail = (e: unknown) => {
+  const body: Record<string, unknown> = e instanceof ApiError ? e.toJSON() : { error: 'internal', message: (e as Error)?.message ?? String(e) };
+  return { content: [{ type: 'text' as const, text: JSON.stringify(body) }], isError: true };
+};
+
+export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope: McpScope, deps: Deps): McpServer {
+  const server = new McpServer({ name: `sonata-${(model.name ?? shortId(model.id)).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, version: '0.1.0' });
+  const { chain, cfg } = deps;
+
+  for (const f of model.functions) {
+    const desc = `${f.doc ? f.doc.trim() + '\n\n' : ''}${sig(f)}\nKind: ${f.kind}. Simulates on ${model.network}; nothing is signed or sent.`;
+    server.registerTool(toolName('call_', f.name), { description: desc, inputSchema: fromJsonSchema<Record<string, unknown>>(ajvSafe(withSource(f.jsonSchema, false))), outputSchema: fromJsonSchema(CALL_OUT) },
+      async (args) => {
+        try {
+          const { source, ...rest } = args;
+          const sim = await chain.simulate(model.network, model.id, f.name, encodeArgs(spec, f.name, rest), (source as string) ?? cfg.simSourceAccount);
+          return ok({ result: decodeResult(spec, f.name, sim.retval), simulated: true, latency_ms: sim.latencyMs, ledger: sim.ledger, auth: sim.auth });
+        } catch (e) {
+          try { namedContractError(e, model, spec); } catch (named) { return fail(named); }
+        }
+      });
+    if (scope === 'rw') {
+      server.registerTool(toolName('build_', f.name), { description: `Build an UNSIGNED transaction for ${sig(f)}. Returns XDR for a wallet to sign; never signs.`, inputSchema: fromJsonSchema<Record<string, unknown>>(ajvSafe(withSource(f.jsonSchema, true))), outputSchema: fromJsonSchema(BUILD_OUT) },
+        async (args) => {
+          try {
+            const { source, ...rest } = args;
+            const b = await chain.buildTx(model.network, model.id, f.name, encodeArgs(spec, f.name, rest), source as string, { timeoutS: 300 });
+            return ok({ xdr: b.xdr, fee: b.fee, auth: b.auth, ledger: b.ledger, expires_at: b.expiresAt });
+          } catch (e) {
+            try { namedContractError(e, model, spec); } catch (named) { return fail(named); }
+          }
+        });
+    }
+  }
+  if (scope === 'rw') {
+    server.registerTool('submit_transaction', { description: 'Submit a signed transaction envelope (base64 XDR) and wait up to 30s for the result.', inputSchema: fromJsonSchema<{ xdr: string }>({ type: 'object', properties: { xdr: { type: 'string' } }, required: ['xdr'] }), outputSchema: fromJsonSchema(TX_OUT) },
+      async ({ xdr }) => {
+        try {
+          const t = await chain.submit(model.network, xdr, 30_000);
+          return ok({ hash: t.hash, status: t.status, ...(t.ledger !== undefined && { ledger: t.ledger }), ...(t.feeCharged && { fee_charged: t.feeCharged }), ...(t.resultXdr && { result_xdr: t.resultXdr }) });
+        } catch (e) {
+          try { namedContractError(e, model, spec); } catch (named) { return fail(named); }
+        }
+      });
+  }
+  server.registerTool('search_functions', { description: 'Find contract functions by name substring, sorted alphabetically.', inputSchema: fromJsonSchema<{ query: string }>({ type: 'object', properties: { query: { type: 'string' } }, required: ['query'] }) },
+    async ({ query }) => {
+      const q = query.toLowerCase();
+      const functions = model.functions.filter((f) => f.name.toLowerCase().includes(q)).map((f) => ({ name: f.name, signature: sig(f), doc: f.doc, kind: f.kind })).sort((a, b) => a.name.localeCompare(b.name));
+      return ok({ functions });
+    });
+  server.registerTool('get_docs', { description: 'llms.txt for this contract: functions, types, errors, events and endpoints.', inputSchema: fromJsonSchema<Record<string, never>>({ type: 'object', properties: {} }) },
+    async () => { const { row } = await deps.registry.ready(model.id); return { content: [{ type: 'text' as const, text: row.llmsTxt ?? '' }] }; });
+  server.registerResource('llms.txt', `sonata://c/${model.id}/llms.txt`, { description: 'AI-ready contract docs', mimeType: 'text/markdown' },
+    async (uri) => { const { row } = await deps.registry.ready(model.id); return { contents: [{ uri: uri.href, mimeType: 'text/markdown', text: row.llmsTxt ?? '' }] }; });
+  return server;
+}
