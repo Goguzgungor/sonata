@@ -12,6 +12,8 @@ export type ContractRow = {
 export type RowPatch = Partial<Omit<ContractRow, 'id' | 'createdAt' | 'updatedAt'>>;
 
 export interface Store {
+  /** Cheapest possible liveness probe — /healthz uses it instead of listing every row. */
+  ping(): Promise<void>;
   get(id: string): Promise<ContractRow | null>;
   list(): Promise<ContractRow[]>;
   upsertQueued(id: string, network: Network, name: string | null): Promise<ContractRow>;
@@ -24,6 +26,7 @@ export class MemoryStore implements Store {
   private rows = new Map<string, ContractRow>();
   private hints = new Map<string, Record<string, FnKind>>();
   clear() { this.rows.clear(); this.hints.clear(); }
+  async ping() {}
   async get(id: string) { const r = this.rows.get(id); return r ? structuredClone(r) : null; }
   async list() { return [...this.rows.values()].map((r) => structuredClone(r)).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()); }
   async upsertQueued(id: string, network: Network, name: string | null) {
@@ -50,6 +53,7 @@ const toRow = (r: typeof contracts.$inferSelect): ContractRow => ({
 export class PgStore implements Store {
   private db;
   constructor(pool: pg.Pool) { this.db = drizzle(pool); }
+  async ping() { await this.db.execute(sql`select 1`); }
   async get(id: string) { const [r] = await this.db.select().from(contracts).where(eq(contracts.id, id)); return r ? toRow(r) : null; }
   async list() { return (await this.db.select().from(contracts).orderBy(sql`${contracts.updatedAt} desc`)).map(toRow); }
   async upsertQueued(id: string, network: Network, name: string | null) {

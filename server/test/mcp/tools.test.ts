@@ -63,6 +63,16 @@ describe('buildMcpServer', () => {
     const s = await client.callTool({ name: 'submit_transaction', arguments: { xdr: 'AAAA' } });
     expect(s.structuredContent).toMatchObject({ hash: 'h', status: 'success' });
   });
+  it('rejects a malformed source with an invalid_args envelope, before any RPC call', async () => {
+    const { client, chain } = await connect('rw');
+    const b = await client.callTool({ name: 'build_ping', arguments: { who: G, n: 1, source: 'x' } });
+    expect(b.isError).toBe(true);
+    expect(JSON.parse((b.content as any)[0].text)).toMatchObject({ error: 'invalid_args', details: { path: 'source' } });
+    const c = await client.callTool({ name: 'call_ping', arguments: { who: G, n: 1, source: 'x' } });
+    expect(c.isError).toBe(true);
+    expect(JSON.parse((c.content as any)[0].text)).toMatchObject({ error: 'invalid_args', details: { path: 'source' } });
+    expect(chain.calls.some((x) => x.method === 'buildTx' || x.method === 'simulate')).toBe(false);
+  });
   it('search_functions and get_docs', async () => {
     const { client } = await connect('ro');
     const s = await client.callTool({ name: 'search_functions', arguments: { query: 'echo' } });

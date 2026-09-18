@@ -35,6 +35,13 @@ describe('POST /call', () => {
     expect((await call(app, 'add', { args: { a: '1', b: '1' }, network: 'mainnet' })).json()).toMatchObject({ error: 'network_mismatch' });
     expect((await call(app, 'add', { a: '1' })).statusCode).toBe(400);
   });
+  it('400 invalid_args for a source that is not a G… public key, before any RPC call', async () => {
+    const { app, chain, registerFixture } = await testApp(); await registerFixture();
+    const res = await call(app, 'add', { args: { a: '1', b: '1' }, source: 'nope' });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'invalid_args', details: { path: 'source' } });
+    expect(chain.calls.some((c) => c.method === 'simulate')).toBe(false);
+  });
   it('409 contract_not_ready while the registration pipeline is still running', async () => {
     const { app, chain, registry } = await testApp();
     chain.impl.getContractWasm = () => new Promise((resolve) => setTimeout(() => resolve(loadFixtureWasm()), 300));
@@ -62,6 +69,15 @@ describe('POST /tx, /submit, GET /tx', () => {
     const res = await app.inject({ method: 'POST', url: `/c/${FIXTURE_ID}/tx/ping`, payload: { args: { who: G, n: 1 }, source: G, timeout_s: 60 } });
     expect(res.json()).toEqual({ xdr: 'AAAA', fee: '100', auth: [G], ledger: 100, expires_at: '2026-01-01T00:00:00.000Z' });
     expect(chain.calls.find((c) => c.method === 'buildTx')!.args[5]).toEqual({ fee: undefined, timeoutS: 60 });
+  });
+  it('400 invalid_args for an empty or malformed source on /tx', async () => {
+    const { app, chain, registerFixture } = await testApp(); await registerFixture();
+    const tx = (source: unknown) => app.inject({ method: 'POST', url: `/c/${FIXTURE_ID}/tx/ping`, payload: { args: { who: G, n: 1 }, source } });
+    const empty = await tx('');
+    expect(empty.statusCode).toBe(400);
+    expect(empty.json()).toMatchObject({ error: 'invalid_args', details: { path: 'source' } });
+    expect((await tx('GNOPE')).statusCode).toBe(400);
+    expect(chain.calls.some((c) => c.method === 'buildTx')).toBe(false);
   });
   it('submit waits and returns status; GET /tx polls', async () => {
     const { app, registerFixture } = await testApp(); await registerFixture();

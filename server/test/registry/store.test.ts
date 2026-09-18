@@ -27,6 +27,9 @@ function suite(name: string, make: () => Promise<{ store: Store; reset: () => Pr
       expect(b.updatedAt.getTime()).toBeGreaterThanOrEqual(a.updatedAt.getTime());
       expect(await s.get('CNOPE')).toBeNull();
     });
+    it('ping resolves against a live store', async () => {
+      await expect(s.ping()).resolves.toBeUndefined();
+    });
     it('hints round-trip and overwrite', async () => {
       await s.upsertQueued(ID, 'testnet', null);
       await s.setHint(ID, 'bump', 'write'); await s.setHint(ID, 'bump', 'read');

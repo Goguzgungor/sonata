@@ -1,13 +1,16 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { StrKey } from '@stellar/stellar-sdk';
 import type { Deps } from '../deps.js';
 import type { TxStatus } from '../../chain/types.js';
 import { badRequest, notFound } from '../../errors.js';
 import { decodeResult, encodeArgs, namedContractError } from '../../spec/codec.js';
 
 const NETWORK = z.enum(['testnet', 'mainnet']);
-const CallBody = z.object({ args: z.record(z.string(), z.unknown()).default({}), source: z.string().optional(), network: NETWORK.optional() });
-const TxBody = CallBody.extend({ source: z.string(), fee: z.string().regex(/^\d+$/).optional(), timeout_s: z.number().int().min(30).max(3600).optional() });
+/** A bad `source` must be a 400 here, not a 500/502 from the SDK or the RPC deeper in (review finding I2). */
+const SOURCE = z.string().refine((s) => StrKey.isValidEd25519PublicKey(s), 'must be a G… ed25519 public key');
+const CallBody = z.object({ args: z.record(z.string(), z.unknown()).default({}), source: SOURCE.optional(), network: NETWORK.optional() });
+const TxBody = CallBody.extend({ source: SOURCE, fee: z.string().regex(/^\d+$/).optional(), timeout_s: z.number().int().min(30).max(3600).optional() });
 const SubmitBody = z.object({ xdr: z.string().min(1) });
 const SUBMIT_WAIT_MS = 30_000;
 

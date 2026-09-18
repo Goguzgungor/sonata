@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { testApp } from '../helpers/app.js';
 import { FIXTURE_ID } from '../fixtures/index.js';
 
@@ -51,11 +51,21 @@ describe('contracts routes', () => {
     const h = await app.inject({ method: 'GET', url: '/healthz' });
     expect(h.json()).toEqual({ db: 'ok', networks: { testnet: 'ok', mainnet: 'ok' } });
   });
-  it('GET /healthz is 503 when a network is degraded', async () => {
+  it('GET /healthz stays 200 when a network is degraded, and says so in the body', async () => {
+    // Liveness is about this process: a degraded upstream RPC must not make the platform recycle it.
     const { app, chain } = await testApp();
     chain.impl.health = async () => 'error';
     const h = await app.inject({ method: 'GET', url: '/healthz' });
-    expect(h.statusCode).toBe(503);
+    expect(h.statusCode).toBe(200);
     expect(h.json()).toEqual({ db: 'ok', networks: { testnet: 'error', mainnet: 'error' } });
+  });
+  it('GET /healthz is 503 only when the database is unreachable, and probes with ping()', async () => {
+    const { app, store } = await testApp();
+    const listed = vi.spyOn(store, 'list');
+    vi.spyOn(store, 'ping').mockRejectedValue(new Error('db is down'));
+    const h = await app.inject({ method: 'GET', url: '/healthz' });
+    expect(h.statusCode).toBe(503);
+    expect(h.json()).toEqual({ db: 'error', networks: { testnet: 'ok', mainnet: 'ok' } });
+    expect(listed).not.toHaveBeenCalled();
   });
 });

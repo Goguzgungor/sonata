@@ -1,6 +1,7 @@
 import { McpServer, fromJsonSchema } from '@modelcontextprotocol/server';
+import { StrKey } from '@stellar/stellar-sdk';
 import type { contract } from '@stellar/stellar-sdk';
-import { ApiError } from '../errors.js';
+import { ApiError, badRequest } from '../errors.js';
 import type { Deps } from '../http/deps.js';
 import { decodeResult, encodeArgs, namedContractError } from '../spec/codec.js';
 import type { ContractModel, JsonSchema, McpScope } from '../types.js';
@@ -18,6 +19,15 @@ const CALL_OUT: JsonSchema = { type: 'object', properties: { result: {}, simulat
 const BUILD_OUT: JsonSchema = { type: 'object', properties: { xdr: { type: 'string' }, fee: { type: 'string' }, auth: { type: 'array', items: { type: 'string' } }, ledger: { type: 'integer' }, expires_at: { type: 'string' } }, required: ['xdr'] };
 const TX_OUT: JsonSchema = { type: 'object', properties: { hash: { type: 'string' }, status: { type: 'string' }, ledger: { type: 'integer' }, fee_charged: { type: 'string' }, return_value: { type: 'string', description: 'Returned ScVal (base64), on success only' }, result_xdr: { type: 'string', description: 'TransactionResult (base64)' } }, required: ['hash', 'status'] };
 const DOCS_OUT: JsonSchema = { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] };
+
+/** A bad `source` must come back as an invalid_args envelope, not a 500/502 from deeper in (review finding I2). */
+function checkSource(s: unknown, required: boolean) {
+  if (s === undefined || s === null) {
+    if (required) throw badRequest('invalid_args', 'source is required: a G… ed25519 public key', { path: 'source' });
+    return;
+  }
+  if (typeof s !== 'string' || !StrKey.isValidEd25519PublicKey(s)) throw badRequest('invalid_args', 'source must be a G… ed25519 public key', { path: 'source' });
+}
 
 const ok = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data) }], structuredContent: data as Record<string, unknown> });
 /** Serializes an already-named error. Ruling: contract-error → spec-name renaming lives once, in
@@ -37,6 +47,7 @@ export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope:
       async (args) => {
         try {
           const { source, ...rest } = args;
+          checkSource(source, false);
           const sim = await chain.simulate(model.network, model.id, f.name, encodeArgs(spec, f.name, rest), (source as string) ?? cfg.simSourceAccount);
           return ok({ result: decodeResult(spec, f.name, sim.retval), simulated: true, latency_ms: sim.latencyMs, ledger: sim.ledger, auth: sim.auth });
         } catch (e) {
@@ -49,6 +60,7 @@ export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope:
         async (args) => {
           try {
             const { source, ...rest } = args;
+            checkSource(source, true);
             const b = await chain.buildTx(model.network, model.id, f.name, encodeArgs(spec, f.name, rest), source as string, { timeoutS: 300 });
             return ok({ xdr: b.xdr, fee: b.fee, auth: b.auth, ledger: b.ledger, expires_at: b.expiresAt });
           } catch (e) {

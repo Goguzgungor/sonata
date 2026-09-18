@@ -37,7 +37,7 @@ Base URL `PUBLIC_BASE_URL` (prod: `https://api.sonata.brages.uk`). JSON everywhe
 
 `return_value` is the invocation's returned ScVal (base64), present on success only; `result_xdr` is the whole `TransactionResult` (base64), present on success and failure. A submit is never retried, and `DUPLICATE` / `TRY_AGAIN_LATER` from the RPC are reported as `pending` (then polled), not as an error — only `ERROR` is `422 submit_rejected`.
 
-`healthz`'s `networks` only lists configured networks (`ok`/`error` per network); an unconfigured network is omitted entirely, and the response is `503` when any listed network — or `db` — is not `ok`.
+`healthz` is a liveness probe for this process: it answers `503` only when the database does not answer a `select 1`. `networks` lists just the configured networks (`ok`/`error` per network, an unconfigured one omitted entirely) — a degraded RPC is reported there but still answers `200`, so the platform does not recycle an otherwise healthy instance.
 
 ## MCP
 
