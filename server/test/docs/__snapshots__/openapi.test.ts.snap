@@ -1,0 +1,4929 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`openapi > is stable 1`] = `
+{
+  "components": {
+    "schemas": {
+      "Error": {
+        "properties": {
+          "code": {
+            "type": "integer",
+          },
+          "details": {},
+          "error": {
+            "type": "string",
+          },
+          "message": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "error",
+          "message",
+        ],
+        "type": "object",
+      },
+      "Level": {
+        "description": "Level: Low = 1, High = 2",
+        "enum": [
+          1,
+          2,
+        ],
+        "type": "integer",
+      },
+      "Nested": {
+        "additionalProperties": false,
+        "description": "A nested struct exercising bytes, maps and unions inside a udt.",
+        "properties": {
+          "blob": {
+            "description": "Bytes as 0x-prefixed hex",
+            "pattern": "^0x([0-9a-fA-F]{2})*$",
+            "type": "string",
+          },
+          "id": {
+            "description": "BytesN<4> as 0x-prefixed hex",
+            "maxLength": 10,
+            "minLength": 10,
+            "pattern": "^0x[0-9a-fA-F]{8}$",
+            "type": "string",
+          },
+          "meta": {
+            "additionalProperties": {
+              "description": "i128 as a decimal string",
+              "pattern": "^-?[0-9]+$",
+              "type": "string",
+            },
+            "description": "Map<Symbol, i128> as an object keyed by Symbol",
+            "type": "object",
+          },
+          "shape": {
+            "description": "A shape: either nothing or a boxed value.",
+            "oneOf": [
+              {
+                "const": "Unit",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "tag": {
+                    "const": "Boxed",
+                  },
+                  "values": {
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "prefixItems": [
+                      {
+                        "type": "integer",
+                      },
+                      {
+                        "type": "string",
+                      },
+                    ],
+                    "type": "array",
+                  },
+                },
+                "required": [
+                  "tag",
+                  "values",
+                ],
+                "type": "object",
+              },
+            ],
+          },
+        },
+        "required": [
+          "blob",
+          "id",
+          "meta",
+          "shape",
+        ],
+        "type": "object",
+      },
+      "Pair": {
+        "additionalProperties": false,
+        "description": "A pair of a number and an address.",
+        "properties": {
+          "a": {
+            "description": "i128 as a decimal string",
+            "pattern": "^-?[0-9]+$",
+            "type": "string",
+          },
+          "b": {
+            "description": "Stellar address (G… or C…)",
+            "type": "string",
+          },
+        },
+        "required": [
+          "a",
+          "b",
+        ],
+        "type": "object",
+      },
+      "Shape": {
+        "description": "A shape: either nothing or a boxed value.",
+        "oneOf": [
+          {
+            "const": "Unit",
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "tag": {
+                "const": "Boxed",
+              },
+              "values": {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "integer",
+                  },
+                  {
+                    "type": "string",
+                  },
+                ],
+                "type": "array",
+              },
+            },
+            "required": [
+              "tag",
+              "values",
+            ],
+            "type": "object",
+          },
+        ],
+      },
+    },
+  },
+  "info": {
+    "description": "Generated from the SEP-48 spec of CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4 on testnet.",
+    "title": "KitchenSink — Sonata API",
+    "version": "b2864e2c87f0",
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4": {
+      "get": {
+        "operationId": "get_contract",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Model",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract",
+          },
+        },
+        "summary": "Contract model and settings",
+        "tags": [
+          "contract",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/add": {
+      "post": {
+        "description": "Returns the sum of two i128 values.",
+        "operationId": "call_add",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "a": {
+                        "description": "i128 as a decimal string",
+                        "pattern": "^-?[0-9]+$",
+                        "type": "string",
+                      },
+                      "b": {
+                        "description": "i128 as a decimal string",
+                        "pattern": "^-?[0-9]+$",
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "a",
+                      "b",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate add",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/bump": {
+      "post": {
+        "description": "Increments and returns a counter (write).",
+        "operationId": "call_bump",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {},
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate bump",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/checked": {
+      "post": {
+        "description": "Fails with TooBig when n > 100.",
+        "operationId": "call_checked",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "n": {
+                        "type": "integer",
+                      },
+                    },
+                    "required": [
+                      "n",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate checked",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/echo_bytes": {
+      "post": {
+        "description": "Echoes bytes.",
+        "operationId": "call_echo_bytes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "b": {
+                        "description": "Bytes as 0x-prefixed hex",
+                        "pattern": "^0x([0-9a-fA-F]{2})*$",
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "b",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate echo_bytes",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/echo_hash": {
+      "post": {
+        "description": "Echoes a 32-byte hash.",
+        "operationId": "call_echo_hash",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "h": {
+                        "description": "BytesN<32> as 0x-prefixed hex",
+                        "maxLength": 66,
+                        "minLength": 66,
+                        "pattern": "^0x[0-9a-fA-F]{64}$",
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "h",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate echo_hash",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/echo_level": {
+      "post": {
+        "description": "Echoes a level.",
+        "operationId": "call_echo_level",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "l": {
+                        "description": "Level: Low = 1, High = 2",
+                        "enum": [
+                          1,
+                          2,
+                        ],
+                        "type": "integer",
+                      },
+                    },
+                    "required": [
+                      "l",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate echo_level",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/echo_map": {
+      "post": {
+        "description": "Echoes a map.",
+        "operationId": "call_echo_map",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "m": {
+                        "additionalProperties": {
+                          "description": "i128 as a decimal string",
+                          "pattern": "^-?[0-9]+$",
+                          "type": "string",
+                        },
+                        "description": "Map<Symbol, i128> as an object keyed by Symbol",
+                        "type": "object",
+                      },
+                    },
+                    "required": [
+                      "m",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate echo_map",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/echo_nested": {
+      "post": {
+        "description": "Echoes a nested struct.",
+        "operationId": "call_echo_nested",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "n": {
+                        "additionalProperties": false,
+                        "description": "A nested struct exercising bytes, maps and unions inside a udt.",
+                        "properties": {
+                          "blob": {
+                            "description": "Bytes as 0x-prefixed hex",
+                            "pattern": "^0x([0-9a-fA-F]{2})*$",
+                            "type": "string",
+                          },
+                          "id": {
+                            "description": "BytesN<4> as 0x-prefixed hex",
+                            "maxLength": 10,
+                            "minLength": 10,
+                            "pattern": "^0x[0-9a-fA-F]{8}$",
+                            "type": "string",
+                          },
+                          "meta": {
+                            "additionalProperties": {
+                              "description": "i128 as a decimal string",
+                              "pattern": "^-?[0-9]+$",
+                              "type": "string",
+                            },
+                            "description": "Map<Symbol, i128> as an object keyed by Symbol",
+                            "type": "object",
+                          },
+                          "shape": {
+                            "description": "A shape: either nothing or a boxed value.",
+                            "oneOf": [
+                              {
+                                "const": "Unit",
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "tag": {
+                                    "const": "Boxed",
+                                  },
+                                  "values": {
+                                    "maxItems": 2,
+                                    "minItems": 2,
+                                    "prefixItems": [
+                                      {
+                                        "type": "integer",
+                                      },
+                                      {
+                                        "type": "string",
+                                      },
+                                    ],
+                                    "type": "array",
+                                  },
+                                },
+                                "required": [
+                                  "tag",
+                                  "values",
+                                ],
+                                "type": "object",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "blob",
+                          "id",
+                          "meta",
+                          "shape",
+                        ],
+                        "type": "object",
+                      },
+                    },
+                    "required": [
+                      "n",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate echo_nested",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/echo_pair": {
+      "post": {
+        "description": "Echoes a pair.",
+        "operationId": "call_echo_pair",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "p": {
+                        "additionalProperties": false,
+                        "description": "A pair of a number and an address.",
+                        "properties": {
+                          "a": {
+                            "description": "i128 as a decimal string",
+                            "pattern": "^-?[0-9]+$",
+                            "type": "string",
+                          },
+                          "b": {
+                            "description": "Stellar address (G… or C…)",
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "a",
+                          "b",
+                        ],
+                        "type": "object",
+                      },
+                    },
+                    "required": [
+                      "p",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate echo_pair",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/echo_shape": {
+      "post": {
+        "description": "Echoes a shape.",
+        "operationId": "call_echo_shape",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "s": {
+                        "description": "A shape: either nothing or a boxed value.",
+                        "oneOf": [
+                          {
+                            "const": "Unit",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "tag": {
+                                "const": "Boxed",
+                              },
+                              "values": {
+                                "maxItems": 2,
+                                "minItems": 2,
+                                "prefixItems": [
+                                  {
+                                    "type": "integer",
+                                  },
+                                  {
+                                    "type": "string",
+                                  },
+                                ],
+                                "type": "array",
+                              },
+                            },
+                            "required": [
+                              "tag",
+                              "values",
+                            ],
+                            "type": "object",
+                          },
+                        ],
+                      },
+                    },
+                    "required": [
+                      "s",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate echo_shape",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/get_count": {
+      "post": {
+        "description": "Returns the counter (read).",
+        "operationId": "call_get_count",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {},
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate get_count",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/list": {
+      "post": {
+        "description": "Returns the length of the list.",
+        "operationId": "call_list",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "v": {
+                        "items": {
+                          "description": "Stellar address (G… or C…)",
+                          "type": "string",
+                        },
+                        "type": "array",
+                      },
+                    },
+                    "required": [
+                      "v",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate list",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/maybe": {
+      "post": {
+        "description": "Echoes an optional number.",
+        "operationId": "call_maybe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "v": {
+                        "anyOf": [
+                          {
+                            "description": "u64 as a decimal string",
+                            "pattern": "^[0-9]+$",
+                            "type": "string",
+                          },
+                          {
+                            "type": "null",
+                          },
+                        ],
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate maybe",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/ping": {
+      "post": {
+        "description": "Requires \`who\` to authorize and emits Pinged.",
+        "operationId": "call_ping",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "n": {
+                        "type": "integer",
+                      },
+                      "who": {
+                        "description": "Stellar address (G… or C…)",
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "who",
+                      "n",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate ping",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/text": {
+      "post": {
+        "description": "Echoes a string.",
+        "operationId": "call_text",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "s": {
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "s",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate text",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/call/tuple": {
+      "post": {
+        "description": "Echoes a tuple.",
+        "operationId": "call_tuple",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "t": {
+                        "maxItems": 2,
+                        "minItems": 2,
+                        "prefixItems": [
+                          {
+                            "type": "integer",
+                          },
+                          {
+                            "type": "boolean",
+                          },
+                        ],
+                        "type": "array",
+                      },
+                    },
+                    "required": [
+                      "t",
+                    ],
+                    "type": "object",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "G… account",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "args",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "latency_ms": {
+                      "type": "integer",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result": {},
+                    "simulated": {
+                      "type": "boolean",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Simulation result",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Simulate tuple",
+        "tags": [
+          "call",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/llms.txt": {
+      "get": {
+        "operationId": "get_llms",
+        "responses": {
+          "200": {
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string",
+                },
+              },
+            },
+            "description": "Markdown",
+          },
+        },
+        "summary": "AI-ready docs",
+        "tags": [
+          "docs",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/status": {
+      "get": {
+        "operationId": "get_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                    },
+                    "steps": {
+                      "type": "array",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Status",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract",
+          },
+        },
+        "summary": "Registration pipeline status",
+        "tags": [
+          "contract",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/submit": {
+      "post": {
+        "operationId": "submit",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "xdr": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "xdr",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "fee_charged": {
+                      "type": "string",
+                    },
+                    "hash": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "result_xdr": {
+                      "description": "TransactionResult (base64), present on success and failure",
+                      "type": "string",
+                    },
+                    "return_value": {
+                      "description": "Returned ScVal (base64), present on success only",
+                      "type": "string",
+                    },
+                    "status": {
+                      "enum": [
+                        "success",
+                        "failed",
+                        "pending",
+                      ],
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Transaction status",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid XDR",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Rejected by the network",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Submit a signed transaction",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/add": {
+      "post": {
+        "description": "Returns the sum of two i128 values.",
+        "operationId": "build_add",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "a": {
+                        "description": "i128 as a decimal string",
+                        "pattern": "^-?[0-9]+$",
+                        "type": "string",
+                      },
+                      "b": {
+                        "description": "i128 as a decimal string",
+                        "pattern": "^-?[0-9]+$",
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "a",
+                      "b",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for add",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/bump": {
+      "post": {
+        "description": "Increments and returns a counter (write).",
+        "operationId": "build_bump",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {},
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for bump",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/checked": {
+      "post": {
+        "description": "Fails with TooBig when n > 100.",
+        "operationId": "build_checked",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "n": {
+                        "type": "integer",
+                      },
+                    },
+                    "required": [
+                      "n",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for checked",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/echo_bytes": {
+      "post": {
+        "description": "Echoes bytes.",
+        "operationId": "build_echo_bytes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "b": {
+                        "description": "Bytes as 0x-prefixed hex",
+                        "pattern": "^0x([0-9a-fA-F]{2})*$",
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "b",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for echo_bytes",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/echo_hash": {
+      "post": {
+        "description": "Echoes a 32-byte hash.",
+        "operationId": "build_echo_hash",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "h": {
+                        "description": "BytesN<32> as 0x-prefixed hex",
+                        "maxLength": 66,
+                        "minLength": 66,
+                        "pattern": "^0x[0-9a-fA-F]{64}$",
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "h",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for echo_hash",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/echo_level": {
+      "post": {
+        "description": "Echoes a level.",
+        "operationId": "build_echo_level",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "l": {
+                        "description": "Level: Low = 1, High = 2",
+                        "enum": [
+                          1,
+                          2,
+                        ],
+                        "type": "integer",
+                      },
+                    },
+                    "required": [
+                      "l",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for echo_level",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/echo_map": {
+      "post": {
+        "description": "Echoes a map.",
+        "operationId": "build_echo_map",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "m": {
+                        "additionalProperties": {
+                          "description": "i128 as a decimal string",
+                          "pattern": "^-?[0-9]+$",
+                          "type": "string",
+                        },
+                        "description": "Map<Symbol, i128> as an object keyed by Symbol",
+                        "type": "object",
+                      },
+                    },
+                    "required": [
+                      "m",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for echo_map",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/echo_nested": {
+      "post": {
+        "description": "Echoes a nested struct.",
+        "operationId": "build_echo_nested",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "n": {
+                        "additionalProperties": false,
+                        "description": "A nested struct exercising bytes, maps and unions inside a udt.",
+                        "properties": {
+                          "blob": {
+                            "description": "Bytes as 0x-prefixed hex",
+                            "pattern": "^0x([0-9a-fA-F]{2})*$",
+                            "type": "string",
+                          },
+                          "id": {
+                            "description": "BytesN<4> as 0x-prefixed hex",
+                            "maxLength": 10,
+                            "minLength": 10,
+                            "pattern": "^0x[0-9a-fA-F]{8}$",
+                            "type": "string",
+                          },
+                          "meta": {
+                            "additionalProperties": {
+                              "description": "i128 as a decimal string",
+                              "pattern": "^-?[0-9]+$",
+                              "type": "string",
+                            },
+                            "description": "Map<Symbol, i128> as an object keyed by Symbol",
+                            "type": "object",
+                          },
+                          "shape": {
+                            "description": "A shape: either nothing or a boxed value.",
+                            "oneOf": [
+                              {
+                                "const": "Unit",
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "tag": {
+                                    "const": "Boxed",
+                                  },
+                                  "values": {
+                                    "maxItems": 2,
+                                    "minItems": 2,
+                                    "prefixItems": [
+                                      {
+                                        "type": "integer",
+                                      },
+                                      {
+                                        "type": "string",
+                                      },
+                                    ],
+                                    "type": "array",
+                                  },
+                                },
+                                "required": [
+                                  "tag",
+                                  "values",
+                                ],
+                                "type": "object",
+                              },
+                            ],
+                          },
+                        },
+                        "required": [
+                          "blob",
+                          "id",
+                          "meta",
+                          "shape",
+                        ],
+                        "type": "object",
+                      },
+                    },
+                    "required": [
+                      "n",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for echo_nested",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/echo_pair": {
+      "post": {
+        "description": "Echoes a pair.",
+        "operationId": "build_echo_pair",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "p": {
+                        "additionalProperties": false,
+                        "description": "A pair of a number and an address.",
+                        "properties": {
+                          "a": {
+                            "description": "i128 as a decimal string",
+                            "pattern": "^-?[0-9]+$",
+                            "type": "string",
+                          },
+                          "b": {
+                            "description": "Stellar address (G… or C…)",
+                            "type": "string",
+                          },
+                        },
+                        "required": [
+                          "a",
+                          "b",
+                        ],
+                        "type": "object",
+                      },
+                    },
+                    "required": [
+                      "p",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for echo_pair",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/echo_shape": {
+      "post": {
+        "description": "Echoes a shape.",
+        "operationId": "build_echo_shape",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "s": {
+                        "description": "A shape: either nothing or a boxed value.",
+                        "oneOf": [
+                          {
+                            "const": "Unit",
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "tag": {
+                                "const": "Boxed",
+                              },
+                              "values": {
+                                "maxItems": 2,
+                                "minItems": 2,
+                                "prefixItems": [
+                                  {
+                                    "type": "integer",
+                                  },
+                                  {
+                                    "type": "string",
+                                  },
+                                ],
+                                "type": "array",
+                              },
+                            },
+                            "required": [
+                              "tag",
+                              "values",
+                            ],
+                            "type": "object",
+                          },
+                        ],
+                      },
+                    },
+                    "required": [
+                      "s",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for echo_shape",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/get_count": {
+      "post": {
+        "description": "Returns the counter (read).",
+        "operationId": "build_get_count",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {},
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for get_count",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/list": {
+      "post": {
+        "description": "Returns the length of the list.",
+        "operationId": "build_list",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "v": {
+                        "items": {
+                          "description": "Stellar address (G… or C…)",
+                          "type": "string",
+                        },
+                        "type": "array",
+                      },
+                    },
+                    "required": [
+                      "v",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for list",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/maybe": {
+      "post": {
+        "description": "Echoes an optional number.",
+        "operationId": "build_maybe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "v": {
+                        "anyOf": [
+                          {
+                            "description": "u64 as a decimal string",
+                            "pattern": "^[0-9]+$",
+                            "type": "string",
+                          },
+                          {
+                            "type": "null",
+                          },
+                        ],
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for maybe",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/ping": {
+      "post": {
+        "description": "Requires \`who\` to authorize and emits Pinged.",
+        "operationId": "build_ping",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "n": {
+                        "type": "integer",
+                      },
+                      "who": {
+                        "description": "Stellar address (G… or C…)",
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "who",
+                      "n",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for ping",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/text": {
+      "post": {
+        "description": "Echoes a string.",
+        "operationId": "build_text",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "s": {
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "s",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for text",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/tuple": {
+      "post": {
+        "description": "Echoes a tuple.",
+        "operationId": "build_tuple",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "args": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "t": {
+                        "maxItems": 2,
+                        "minItems": 2,
+                        "prefixItems": [
+                          {
+                            "type": "integer",
+                          },
+                          {
+                            "type": "boolean",
+                          },
+                        ],
+                        "type": "array",
+                      },
+                    },
+                    "required": [
+                      "t",
+                    ],
+                    "type": "object",
+                  },
+                  "fee": {
+                    "description": "Per-operation inclusion fee in stroops (default 100). The response fee is the assembled total.",
+                    "type": "string",
+                  },
+                  "network": {
+                    "enum": [
+                      "testnet",
+                    ],
+                    "type": "string",
+                  },
+                  "source": {
+                    "type": "string",
+                  },
+                  "timeout_s": {
+                    "type": "integer",
+                  },
+                },
+                "required": [
+                  "args",
+                  "source",
+                ],
+                "type": "object",
+              },
+            },
+          },
+          "required": true,
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "auth": {
+                      "description": "Addresses that must sign",
+                      "items": {
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "expires_at": {
+                      "type": "string",
+                    },
+                    "fee": {
+                      "type": "string",
+                    },
+                    "ledger": {
+                      "type": "integer",
+                    },
+                    "xdr": {
+                      "type": "string",
+                    },
+                  },
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Unsigned transaction",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid arguments or request",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract or function",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract or host error from simulation",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Build unsigned XDR for tuple",
+        "tags": [
+          "tx",
+        ],
+      },
+    },
+  },
+  "servers": [
+    {
+      "url": "https://api.sonata.test",
+    },
+  ],
+}
+`;

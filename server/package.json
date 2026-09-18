@@ -1,0 +1,39 @@
+{
+  "name": "sonata-server",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --import tsx --watch src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --exclude 'test/e2e/**'",
+    "test:watch": "vitest --exclude 'test/e2e/**'",
+    "test:e2e": "vitest run test/e2e",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file-if-exists=.env --import tsx src/registry/migrate.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/rate-limit": "^11.2.0",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@stellar/stellar-sdk": "^17.1.0",
+    "drizzle-orm": "^0.45.0",
+    "fastify": "^5.12.0",
+    "p-queue": "^9.3.0",
+    "pg": "^8.23.0",
+    "pino": "^10.3.0",
+    "zod": "^4.6.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@types/node": "^22",
+    "@types/pg": "^8",
+    "drizzle-kit": "^0.31.0",
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.0"
+  }
+}

@@ -21,7 +21,8 @@ npx vercel --prod
 - `components/data.js` — all demo data in one place
 - `lib/sonata-bundle.js` — the @sonata/ui component bundle (client-only, exposes `window.SonataUI`)
 - `lib/sonata.js` — `useSonataUI()` hook + clipboard/download helpers
+- `server/` — the API + MCP server (Node/Fastify/Postgres). See `server/README.md`.
 
 ## Notes
 - The UI kit loads client-side only, so screens render after mount (`useSonataUI()` returns null during SSR). 
-- Front-end only: no real wallet connection or chain data.
+- The site still uses demo data; wiring it to `server/` is the next milestone.
