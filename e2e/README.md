@@ -36,6 +36,18 @@ check that the public explorer page reflects the same contract.
   Defaults to `GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF`.
 - `SITE_URL` — base URL for the site under test. Defaults to
   `http://localhost:3000`.
+- `E2E_API_URL` — the Sonata API the site talks to, used directly by the test
+  to reset the fixture's MCP scope afterwards. Falls back to
+  `NEXT_PUBLIC_API_URL`, then `http://localhost:8080`.
+
+## Notes
+
+- The test reads the contract's function count from the workspace's
+  `Functions N` tab and derives every count it asserts from it (`Tools ·
+  2N+3 enabled` after switching to read+write, `Functions · N` on the public
+  page), so a fixture with a different number of functions still passes.
+- It flips the fixture's MCP scope to read+write; an `afterEach` PATCHes it
+  back to `ro`, so reruns start from the read-only default.
 
 ## Run
 

@@ -40,7 +40,8 @@ export default function Functions({ S, contract: c, id }) {
       const body = mode === 'sim' ? await contracts.call(id, fn.name, args, source.trim() || undefined) : await contracts.tx(id, fn.name, args, source.trim());
       setOut({ kind: mode, body });
     } catch (err) {
-      if (err.error === 'invalid_args' && err.details?.path) setErrors({ [err.details.path]: err.message });
+      // details.path can point inside a value ("orders[0].qty"); the form is keyed by the top-level argument name.
+      if (err.error === 'invalid_args' && err.details?.path) setErrors({ [String(err.details.path).split(/[.[]/)[0]]: err.message });
       setOut({ kind: 'error', body: err });
     } finally { setBusy(false); }
   };

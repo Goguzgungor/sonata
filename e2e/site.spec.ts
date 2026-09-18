@@ -2,6 +2,13 @@ import { test, expect } from '@playwright/test';
 
 const ID = process.env.E2E_CONTRACT_ID || 'CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP';
 const G = process.env.E2E_SOURCE || 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+const API = process.env.E2E_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+// The run flips the fixture's MCP scope to read+write; put it back so the next
+// run (and anything else pointed at this API) starts from the read-only default.
+test.afterEach(async ({ request }) => {
+  await request.patch(`${API}/c/${ID}`, { data: { mcp_scope: 'ro' } });
+});
 
 test('register → workspace → simulate → build → mcp → docs → public page', async ({ page }) => {
   await page.goto(`/register?id=${ID}`);
@@ -14,11 +21,16 @@ test('register → workspace → simulate → build → mcp → docs → public 
   await page.getByRole('button', { name: 'Open contract workspace' }).click();
 
   await expect(page).toHaveURL(new RegExp(`/c/${ID}/overview`));
-  await expect(page.getByText('Functions', { exact: false }).first()).toBeVisible();
 
   // Tabs render as role="tab" (confirmed via DOM inspection: `<div role="tab">`
-  // inside a `tablist`), so a role-based locator is used throughout.
-  await page.getByRole('tab', { name: /Functions/ }).click();
+  // inside a `tablist`), so a role-based locator is used throughout. The tab
+  // carries the function count in a `.sn-tabs__count` span; everything below
+  // is derived from it so the test doesn't hard-code the fixture's shape.
+  const fnTab = page.getByRole('tab', { name: /Functions/ });
+  await expect(fnTab).toBeVisible();
+  const n = Number((await fnTab.locator('.sn-tabs__count').innerText()).trim());
+  expect(n).toBeGreaterThan(0);
+  await fnTab.click();
 
   // Function names in the Functions table render as `<button class="crumb">`,
   // so a plain role=button locator (with exact match to avoid substring
@@ -51,17 +63,17 @@ test('register → workspace → simulate → build → mcp → docs → public 
   await page.getByRole('tab', { name: /MCP/ }).click();
   // Same Segmented-as-radiogroup pattern as the call/build mode above.
   await page.getByRole('radio', { name: 'Read + write' }).click();
-  // The fixture has 15 functions (33 = 15 call + 15 build + submit_transaction
-  // + search_functions + get_docs); read-only is 17 (15 call + 2 docs tools).
-  // "enabled" also appears in an unrelated helper sentence above the table, so
-  // the count label itself ("Tools · 33 enabled") is matched exactly to avoid
-  // a strict-mode violation from multiple matches.
-  await expect(page.getByText('Tools · 33 enabled')).toBeVisible({ timeout: 15_000 });
+  // read+write exposes 2n+3 tools (n call_* + n build_* + submit_transaction +
+  // search_functions + get_docs); read-only is n+2. "enabled" also appears in an
+  // unrelated helper sentence above the table, so the count label itself
+  // ("Tools · N enabled") is matched exactly to avoid a strict-mode violation.
+  await expect(page.getByText(`Tools · ${n * 2 + 3} enabled`)).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole('tab', { name: /Docs/ }).click();
-  await expect(page.locator('pre')).toContainText('# ', { timeout: 15_000 });
+  // Scoped to the llms.txt panel: other tabs/screens render <pre> blocks too.
+  await expect(page.locator('.code-panel pre')).toContainText('# ', { timeout: 15_000 });
 
   await page.goto(`/explorer/${ID}`);
   await expect(page.getByText(`/c/${ID}/mcp`)).toBeVisible();
-  await expect(page.getByText('Functions · 15')).toBeVisible();
+  await expect(page.getByText(`Functions · ${n}`)).toBeVisible();
 });
