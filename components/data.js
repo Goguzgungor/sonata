@@ -1,7 +1,7 @@
 export const SITE_URL = 'https://sonata.brages.uk';
-export const API_URL = 'https://api.sonata.brages.uk';
+export const DEMO_API_URL = 'https://api.sonata.brages.uk';
 export const CONTRACT_ID = 'CGA4VK53W6R2XPLZ7SM3NQ7TRH24JC7SFK3D5TPZ2XQ7WVN6M6ABCD4R';
-export const MCP_URL = API_URL + '/c/CGA4…D4R/mcp';
+export const MCP_URL = DEMO_API_URL + '/c/CGA4…D4R/mcp';
 export const XDR = 'AAAAAgAAAADzKF2C7SFK3D5TPZ2XQ7WVN6M6ABCD4RXPLZ7SM3NQ7TRH24AAAAZAACv1MAAAAkAAAAAQAAAAAAAAAAAAAAAGjA0uMAAAAAAAAAAQAAAAAAAAAYAAAAAAAAAAEidHJhbnNmZXIiLCBHQlg3, R0NLMiwgMTI1MCBVU0RD…';
 export const MCP_CONFIG = `{
   "mcpServers": {

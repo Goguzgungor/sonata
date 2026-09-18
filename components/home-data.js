@@ -1,4 +1,4 @@
-import { CONTRACT_ID, MCP_URL, MCP_CONFIG, API_URL } from './data';
+import { CONTRACT_ID, MCP_URL, MCP_CONFIG, DEMO_API_URL } from './data';
 
 export const HOME_STATS = [
   { label: 'Contract to hosted API', value: '30', unit: 's' },
@@ -20,7 +20,7 @@ export const HOME_SURFACES = [
   { audience: 'Analytics', name: 'Indexed history', d: 'Decoded events and calls, filterable by address and time, exportable as CSV or JSON.', endpoint: 'GET /c/CGA4…D4R/events?address=G…' }
 ];
 
-export const HOME_CURL = `API=${API_URL}
+export const HOME_CURL = `API=${DEMO_API_URL}
 
 curl -X POST "$API/c/${CONTRACT_ID.slice(0, 4)}…D4R/tx/transfer" \\
   -H "Content-Type: application/json" \\

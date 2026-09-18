@@ -1,4 +1,4 @@
-import { CONTRACT_ID, MCP_URL, MCP_CONFIG, LLMS, API_URL } from './data';
+import { CONTRACT_ID, MCP_URL, MCP_CONFIG, LLMS, DEMO_API_URL } from './data';
 
 const SHORT = CONTRACT_ID.slice(0, 4) + '…D4R';
 
@@ -20,7 +20,7 @@ export const DOCS = [
       { h: 'How it fits together', blocks: [
         { p: 'You register a contract once. Sonata reads its spec, publishes the four surfaces under a single base URL and keeps the history indexed as new ledgers close.' },
         { kv: [
-          { key: 'Base URL', value: API_URL },
+          { key: 'Base URL', value: DEMO_API_URL },
           { key: 'Contract path', value: '/c/{contractId}' },
           { key: 'Networks', value: 'testnet · mainnet', mono: false },
           { key: 'Auth', value: 'None in the preview build', mono: false }
@@ -39,7 +39,7 @@ export const DOCS = [
         { p: 'Connect a Freighter wallet, open Contracts and choose Add a contract. Paste the contract ID and pick a network. The pipeline reads the spec, generates the surfaces and indexes history.' }
       ] },
       { h: '2. Make a read call', blocks: [
-        { code: `curl -X POST "${API_URL}/c/${SHORT}/call/balance" \\
+        { code: `curl -X POST "${DEMO_API_URL}/c/${SHORT}/call/balance" \\
   -H "Content-Type: application/json" \\
   -d '{ "args": { "id": "GBX7…4Q9" } }'
 
@@ -47,7 +47,7 @@ export const DOCS = [
       ] },
       { h: '3. Build and sign a write', blocks: [
         { p: 'Write functions return unsigned XDR. Sign it with Freighter or any Stellar signer and submit it yourself, or let the MCP tool hand it to your agent.' },
-        { code: `curl -X POST "${API_URL}/c/${SHORT}/tx/transfer" \\
+        { code: `curl -X POST "${DEMO_API_URL}/c/${SHORT}/tx/transfer" \\
   -d '{ "args": { "from": "GBX7…4Q9", "to": "GCK2…M8P", "amount": "1250000000" } }'
 
 # -> { "xdr": "AAAAAgAAAADzKF2C…", "fee": "100" }` }

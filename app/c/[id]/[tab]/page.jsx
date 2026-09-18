@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation';
 import Workspace from '@/components/workspace/Workspace';
 import { TAB_LABEL } from '@/components/data';
 import { pageMeta } from '@/components/seo';
@@ -10,5 +11,6 @@ export async function generateMetadata({ params }) {
 
 export default async function Page({ params }) {
   const { id, tab } = await params;
+  if (!TAB_LABEL[tab]) notFound();     // only the five real tabs are routes
   return <Workspace id={id} tab={tab} />;
 }

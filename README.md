@@ -15,10 +15,10 @@ npx vercel --prod
 ```
 
 ## Structure
-- `app/` — routes: `/`, `/register`, `/contracts`, `/c/[id]/[tab]` (overview · functions · mcp · docs · history), `/keys`
+- `app/` — routes: `/`, `/register`, `/contracts`, `/c/[id]/[tab]` (overview · functions · mcp · docs · history), `/explorer`, `/explorer/[id]`, `/flows`, `/docs`, `/keys`
 - `app/globals.css` — site layout classes; `app/sonata.css` — @sonata/ui tokens + component styles
 - `components/screens/` + `components/workspace/` — one component per screen/tab
-- `components/data.js` — all demo data in one place
+- `components/data.js` — demo data for the screens that still use it (plus `explorer-data.js`, `flows-data.js`, `home-data.js`, `docs-data.js`)
 - `lib/api.js`, `lib/useApi.js`, `lib/args.js` — API client, data hooks, argument-form helpers
 - `lib/sonata-bundle.js` — the @sonata/ui component bundle (client-only, exposes `window.SonataUI`)
 - `lib/sonata.js` — `useSonataUI()` hook + clipboard/download helpers
