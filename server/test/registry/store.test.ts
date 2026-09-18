@@ -14,14 +14,14 @@ function suite(name: string, make: () => Promise<{ store: Store; reset: () => Pr
     afterAll(() => close());
 
     it('upsertQueued creates then keeps an existing row', async () => {
-      const a = await s.upsertQueued(ID, 'testnet', 'Kitchen');
+      const a = await s.upsertQueued(ID, 'testnet', 'Kitchen', null);
       expect(a).toMatchObject({ id: ID, network: 'testnet', name: 'Kitchen', status: 'queued', mcpScope: 'ro', steps: [] });
-      const b = await s.upsertQueued(ID, 'testnet', null);
+      const b = await s.upsertQueued(ID, 'testnet', null, null);
       expect(b.name).toBe('Kitchen');
       expect((await s.list()).map((r) => r.id)).toEqual([ID]);
     });
     it('update patches and bumps updatedAt', async () => {
-      const a = await s.upsertQueued(ID, 'testnet', null);
+      const a = await s.upsertQueued(ID, 'testnet', null, null);
       const b = await s.update(ID, { status: 'ready', steps: [{ name: 'fetch', status: 'done', detail: 'x' }], mcpScope: 'rw' });
       expect(b.status).toBe('ready'); expect(b.steps[0].detail).toBe('x'); expect(b.mcpScope).toBe('rw');
       expect(b.updatedAt.getTime()).toBeGreaterThanOrEqual(a.updatedAt.getTime());
@@ -31,7 +31,7 @@ function suite(name: string, make: () => Promise<{ store: Store; reset: () => Pr
       await expect(s.ping()).resolves.toBeUndefined();
     });
     it('hints round-trip and overwrite', async () => {
-      await s.upsertQueued(ID, 'testnet', null);
+      await s.upsertQueued(ID, 'testnet', null, null);
       await s.setHint(ID, 'bump', 'write'); await s.setHint(ID, 'bump', 'read');
       expect(await s.getHints(ID)).toEqual({ bump: 'read' });
     });

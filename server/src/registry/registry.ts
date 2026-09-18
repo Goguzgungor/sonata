@@ -33,9 +33,9 @@ export class Registry {
     while (this.cache.size > this.cacheMax) this.cache.delete(this.cache.keys().next().value!);
   }
 
-  async register(id: string, network: Network, name: string | null = null): Promise<ContractRow> {
+  async register(id: string, network: Network, name: string | null = null, owner: string | null = null): Promise<ContractRow> {
     if (!StrKey.isValidContract(id)) throw badRequest('invalid_contract_id', 'contract id must be a 56-character C… address');
-    const row = await this.deps.store.upsertQueued(id, network, name);
+    const row = await this.deps.store.upsertQueued(id, network, name, owner);
     this.cache.delete(id);
     if (!this.inflight.has(id)) {
       this.inflight.add(id);

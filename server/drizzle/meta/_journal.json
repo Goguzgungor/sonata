@@ -8,6 +8,13 @@
       "when": 1789682413616,
       "tag": "0000_long_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789758478319,
+      "tag": "0001_owner_settings",
+      "breakpoints": true
     }
   ]
 }
