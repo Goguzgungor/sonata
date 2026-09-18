@@ -42,7 +42,7 @@ export default function Register({ initialId = '' }) {
           onAction={() => { if (navigator.clipboard?.readText) navigator.clipboard.readText().then((t) => { if (t) setAddr(t.trim()); }).catch(() => {}); }} />
         <S.Field label="Name (optional)" hint="Shown in lists and generated docs" value={name} onChange={(e) => setName(e.target.value)} />
         <div className="seg-wrap" style={{ alignSelf: 'flex-start' }}>
-          <S.Segmented ariaLabel="Network" options={NET_OPTS} value={net} onChange={setNet} />
+          <S.Segmented ariaLabel="Network" options={NET_OPTS} value={net} onChange={(v) => { setNet(v); setSubmitErr(null); }} />
         </div>
         <div className="actions">
           <S.Button arrow disabled={!valid || submitting} onClick={generate}>{submitting ? 'Submitting…' : 'Generate'}</S.Button>
@@ -63,7 +63,7 @@ export default function Register({ initialId = '' }) {
           {st.status === 'failed' && (
             <div style={{ marginTop: 32, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
               <span className="sn-small">{st.error || 'Registration failed.'}</span>
-              <S.Button variant="secondary" onClick={generate}>Try again</S.Button>
+              <S.Button variant="secondary" disabled={submitting} onClick={generate}>Try again</S.Button>
             </div>
           )}
         </div>

@@ -41,4 +41,13 @@ describe('usePoll', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(f).not.toHaveBeenCalled();
   });
+  it('clears previous data when re-enabled', async () => {
+    let n = 0;
+    const { result, rerender } = renderHook(({ on }) => usePoll(async () => { await new Promise((r) => setTimeout(r, 5)); return { n: ++n }; }, { every: 5, until: () => true, enabled: on }), { initialProps: { on: true } });
+    await waitFor(() => expect(result.current.data).toEqual({ n: 1 }));
+    rerender({ on: false });
+    rerender({ on: true });
+    expect(result.current.data).toBeNull();          // reset synchronously on restart
+    await waitFor(() => expect(result.current.data).toEqual({ n: 2 }));
+  });
 });
