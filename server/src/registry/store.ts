@@ -25,6 +25,10 @@ export interface Store {
   setHint(id: string, fn: string, kind: FnKind): Promise<void>;
   getSetting(key: string): Promise<string | null>;
   setSetting(key: string, value: string): Promise<void>;
+  /** Inserts `value` only if `key` is absent, then returns whatever is now stored (the existing value on a race).
+   *  Used for self-generated secrets so concurrently cold-booting instances converge on one value instead of
+   *  each writing its own (setSetting is last-writer-wins and unsafe for that). */
+  putSettingIfAbsent(key: string, value: string): Promise<string>;
 }
 
 export class MemoryStore implements Store {
@@ -57,6 +61,10 @@ export class MemoryStore implements Store {
   async setHint(id: string, fn: string, kind: FnKind) { this.hints.set(id, { ...(this.hints.get(id) ?? {}), [fn]: kind }); }
   async getSetting(key: string) { return this.settings.get(key) ?? null; }
   async setSetting(key: string, value: string) { this.settings.set(key, value); }
+  async putSettingIfAbsent(key: string, value: string) {
+    if (!this.settings.has(key)) this.settings.set(key, value);
+    return this.settings.get(key)!;
+  }
 }
 
 const toRow = (r: typeof contracts.$inferSelect): ContractRow => ({
@@ -99,5 +107,10 @@ export class PgStore implements Store {
   async getSetting(key: string) { const [r] = await this.db.select().from(settings).where(eq(settings.key, key)); return r ? r.value : null; }
   async setSetting(key: string, value: string) {
     await this.db.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } });
+  }
+  async putSettingIfAbsent(key: string, value: string) {
+    await this.db.insert(settings).values({ key, value }).onConflictDoNothing({ target: settings.key });
+    const [r] = await this.db.select().from(settings).where(eq(settings.key, key));
+    return r!.value;
   }
 }

@@ -42,6 +42,8 @@ Base URL `PUBLIC_BASE_URL` (prod: `https://api.sonata.brages.uk`). JSON everywhe
 
 **Ownership.** `POST /contracts` and `PATCH /c/:id` require a session: the wallet signs a SEP-10 challenge from `POST /auth/challenge`, submits it to `POST /auth/token`, and gets back a 24 h bearer token to send as `Authorization: Bearer <token>`. The first wallet to register a contract owns it; rows registered before this release have no owner and are claimed by the first wallet that registers or patches them.
 
+The `auth_secret` (JWT signing key) and `auth_signing_seed` (SEP-10 challenge signer) are self-generated on first boot and persisted in the `settings` table via an insert-only write, so multiple instances cold-booting at once converge on the same pair instead of each minting its own. The signed-challenge replay guard (`ChallengeVerifier`'s `used` set in `src/auth/challenge.ts`), however, is an in-memory `Map` kept per process, not shared through the store. With a single instance a signed challenge can be redeemed for a token exactly once; with more than one instance behind a load balancer, a leaked signed challenge could be replayed once per instance until that replay set moves to a shared store (Postgres or Redis) — worth keeping in mind before scaling this service horizontally.
+
 `healthz` is a liveness probe for this process: it answers `503` only when the database does not answer a `select 1`. `networks` lists just the configured networks (`ok`/`error` per network, an unconfigured one omitted entirely) — a degraded RPC is reported there but still answers `200`, so the platform does not recycle an otherwise healthy instance.
 
 ## MCP
