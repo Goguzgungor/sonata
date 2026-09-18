@@ -2,13 +2,12 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSonataUI } from '@/lib/sonata';
-import { contracts, shortId, shortAddr, relTime, mcpToolCount } from '@/lib/api';
+import { contracts, shortId, shortAddr, relTime, mcpToolCount, mcpGlobalConfig } from '@/lib/api';
 import { useApi } from '@/lib/useApi';
 import Async from '@/components/Async';
 import NotRegistered from '@/components/NotRegistered';
 import { Label, CodeBox, CopyButton, ResponsiveTable } from '@/components/ui';
 import { expertUrl } from '@/lib/expert';
-import { mcpConfig } from '@/components/workspace/Mcp';
 import { PipelineSteps, STATUS } from '@/components/workspace/Workspace';
 
 const FN_COLS = [
@@ -18,7 +17,6 @@ const FN_COLS = [
 const sig = (f) => `${f.name}(${f.inputs.map((i) => `${i.name}: ${i.type}`).join(', ')}) → ${f.output}`;
 
 function Live({ S, c, router }) {
-  const config = mcpConfig(c);
   const rows = c.functions.map((f, i) => ({ num: <S.Numeral index={i + 1} />, fn: f.name, sig: sig(f), kind: <S.Chip tone={f.kind === 'write' ? 'inverse' : 'neutral'}>{f.kind === 'write' ? 'Write' : f.kind === 'read' ? 'Read' : 'Unknown'}</S.Chip> }));
   const name = c.name || shortId(c.id);
   return (
@@ -58,10 +56,10 @@ function Live({ S, c, router }) {
         </div>
         <div>
           <Label style={{ marginBottom: 16 }}>Connect an agent</Label>
-          <CodeBox right={<CopyButton S={S} text={config}>Copy</CopyButton>}>
-            <pre className="sn-mono" style={{ margin: 0, fontSize: 12, lineHeight: 1.7, fontFamily: 'var(--sn-font-mono)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{config}</pre>
+          <CodeBox right={<CopyButton S={S} text={mcpGlobalConfig}>Copy</CopyButton>}>
+            <pre className="sn-mono" style={{ margin: 0, fontSize: 12, lineHeight: 1.7, fontFamily: 'var(--sn-font-mono)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{mcpGlobalConfig}</pre>
           </CodeBox>
-          <div className="sn-small sn-muted" style={{ marginTop: 12 }}>Read tools work without a key. Write tools are enabled per contract from its workspace.</div>
+          <div className="sn-small sn-muted" style={{ marginTop: 12, overflowWrap: 'anywhere' }}>Scoped endpoint: {c.urls.mcp}</div>
         </div>
       </div>
       <div>

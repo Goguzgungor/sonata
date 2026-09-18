@@ -1,4 +1,4 @@
-import { API_URL } from '@/lib/api';
+import { API_URL, mcpGlobalConfig, mcpGlobalOneLiner } from '@/lib/api';
 
 /* Each doc page: slug, title, intro, sections[]. Blocks: p | code | list | kv */
 export const DOCS = [
@@ -111,30 +111,32 @@ curl -X POST "${API_URL}/c/{contractId}/submit" \\
   },
   {
     slug: 'mcp', title: 'MCP server', nav: 'MCP server',
-    intro: 'Give Claude, Cursor or Codex contract-level tools without writing a single wrapper.',
+    intro: 'One endpoint for every registered contract.',
     sections: [
       { h: 'Connect', blocks: [
-        { p: 'Every contract exposes its own MCP endpoint over HTTP. Paste the config into your client or run the one-liner.' },
-        { code: `{
-  "mcpServers": {
-    "sonata-<name>": {
-      "url": "${API_URL}/c/{contractId}/mcp",
-      "type": "http"
-    }
-  }
-}
+        { p: 'One global MCP server over Streamable HTTP covers every registered contract, on any network. Paste the config into your client or run the one-liner.' },
+        { code: `${mcpGlobalConfig}
 
-claude mcp add --transport http sonata-<name> ${API_URL}/c/{contractId}/mcp` }
+${mcpGlobalOneLiner}` }
+      ] },
+      { h: 'Workflow', blocks: [
+        { p: 'list_contracts to find a contract → get_contract for its function list and argument schemas → call to simulate or build to get unsigned XDR → the user’s wallet signs → submit the signed transaction.' }
       ] },
       { h: 'Tools', blocks: [
         { kv: [
-          { key: 'search_functions', value: 'Find functions by name or purpose', mono: false },
-          { key: 'get_docs', value: 'Return llms.txt for the contract', mono: false },
-          { key: 'call_{fn}', value: 'Simulate a function', mono: false },
-          { key: 'build_{fn}', value: 'Build unsigned XDR for a function (read + write scope)', mono: false },
-          { key: 'submit_transaction', value: 'Submit a signed transaction (read + write scope)', mono: false }
+          { key: 'list_contracts', value: '{ network?, q?, include_pending? } → ready contracts by default, newest updated first, capped at 200', mono: false },
+          { key: 'get_contract', value: '{ id } → functions with JSON schemas, types, errors, events, mcp_scope, owner, urls', mono: false },
+          { key: 'search_functions', value: '{ id, query } → matching functions by name or purpose', mono: false },
+          { key: 'get_docs', value: '{ id } → llms.txt for the contract', mono: false },
+          { key: 'call', value: '{ id, fn, args?, source? } → simulate any function, read or write', mono: false },
+          { key: 'build', value: '{ id, fn, args?, source, fee?, timeout_s? } → unsigned XDR for the user’s wallet to sign', mono: false },
+          { key: 'submit', value: '{ id, xdr } → submit a signed transaction, wait up to 30 s', mono: false },
+          { key: 'get_tx', value: '{ hash, network } → poll a submitted transaction', mono: false }
         ] },
-        { p: 'Write tools (build_{fn} and submit_transaction) stay disabled until the owner switches the contract’s MCP scope to read + write in the workspace. Agents never hold keys: they receive unsigned XDR and hand it to a signer.' }
+        { p: 'build and submit only work for a contract whose owner has switched its MCP scope to read + write; every other tool works regardless of scope. Agents never hold keys: they receive unsigned XDR and hand it to a signer.' }
+      ] },
+      { h: 'Scoped endpoints', blocks: [
+        { p: `Each registered contract also exposes its own scoped MCP server, narrowed to just that contract's tools (search_functions, get_docs, call_{fn}, and build_{fn} / submit_transaction once the owner enables read + write): claude mcp add --transport http sonata-<name> ${API_URL}/c/{contractId}/mcp` }
       ] }
     ]
   },

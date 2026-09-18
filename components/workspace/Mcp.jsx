@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { contracts, shortId } from '@/lib/api';
+import { contracts, shortId, mcpGlobalConfig, mcpGlobalOneLiner } from '@/lib/api';
 import { Label, CodeBox, CopyButton, ResponsiveTable } from '@/components/ui';
 
 const COLS = [
@@ -64,6 +64,7 @@ export default function Mcp({ S, contract: c, id, refetch, isOwner }) {
           {!isOwner ? 'Only the wallet that registered this contract can change the scope.' : saving ? 'Saving…' : err ? `Couldn't change scope: ${err.message}` : rw ? 'Write tools are enabled. Agents can build unsigned transactions and submit signed ones.' : 'Write tools stay disabled until you enable them explicitly. Agents never hold keys.'}
         </span>
       </div>
+      <div className="sn-small sn-muted">The global endpoint exposes this contract through call / build / submit under the same scope.</div>
       <div>
         <Label style={{ marginBottom: 16 }}>Tools · {tools.filter((t) => t.on).length} enabled</Label>
         <ResponsiveTable S={S} columns={COLS} rows={rows} minWidth={760} />
@@ -71,19 +72,31 @@ export default function Mcp({ S, contract: c, id, refetch, isOwner }) {
       <div style={{ maxWidth: 976 }}>
         <Label>Connect an agent</Label>
         <div style={{ marginTop: 16 }}>
+          <Label style={{ marginBottom: 8 }}>All contracts (recommended)</Label>
+          <CodeBox right={<CopyButton S={S} text={mcpGlobalConfig}>Copy</CopyButton>}>
+            <pre className="sn-mono" style={{ margin: 0, fontSize: 12, lineHeight: 1.7, fontFamily: 'var(--sn-font-mono)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{mcpGlobalConfig}</pre>
+          </CodeBox>
+          <div style={{ marginTop: 12 }}>
+            <CodeBox right={<CopyButton S={S} text={mcpGlobalOneLiner}>Copy</CopyButton>}>
+              <div className="sn-mono" style={{ fontSize: 12, overflowWrap: 'anywhere' }}>{mcpGlobalOneLiner}</div>
+            </CodeBox>
+          </div>
+          <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <CopyButton S={S} variant="secondary" text={mcpGlobalConfig}>Claude</CopyButton>
+            <CopyButton S={S} variant="secondary" text={mcpGlobalConfig}>Cursor</CopyButton>
+            <CopyButton S={S} variant="secondary" text={mcpGlobalConfig}>Codex</CopyButton>
+          </div>
+        </div>
+        <div style={{ marginTop: 32 }}>
+          <Label style={{ marginBottom: 8 }}>This contract only</Label>
           <CodeBox right={<CopyButton S={S} text={config}>Copy</CopyButton>}>
             <pre className="sn-mono" style={{ margin: 0, fontSize: 12, lineHeight: 1.7, fontFamily: 'var(--sn-font-mono)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{config}</pre>
           </CodeBox>
-        </div>
-        <div style={{ marginTop: 12 }}>
-          <CodeBox right={<CopyButton S={S} text={oneLiner}>Copy</CopyButton>}>
-            <div className="sn-mono" style={{ fontSize: 12, overflowWrap: 'anywhere' }}>{oneLiner}</div>
-          </CodeBox>
-        </div>
-        <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <CopyButton S={S} variant="secondary" text={config}>Claude</CopyButton>
-          <CopyButton S={S} variant="secondary" text={config}>Cursor</CopyButton>
-          <CopyButton S={S} variant="secondary" text={config}>Codex</CopyButton>
+          <div style={{ marginTop: 12 }}>
+            <CodeBox right={<CopyButton S={S} text={oneLiner}>Copy</CopyButton>}>
+              <div className="sn-mono" style={{ fontSize: 12, overflowWrap: 'anywhere' }}>{oneLiner}</div>
+            </CodeBox>
+          </div>
         </div>
       </div>
     </>
