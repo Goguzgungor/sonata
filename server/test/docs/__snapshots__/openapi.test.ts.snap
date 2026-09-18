@@ -64,7 +64,9 @@ exports[`openapi > is stable 1`] = `
                 "const": "Boxed",
               },
               "values": {
-                "items": [
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
                   {
                     "type": "integer",
                   },
@@ -72,8 +74,6 @@ exports[`openapi > is stable 1`] = `
                     "type": "string",
                   },
                 ],
-                "maxItems": 2,
-                "minItems": 2,
                 "type": "array",
               },
             },
@@ -1218,7 +1218,9 @@ exports[`openapi > is stable 1`] = `
                                 "const": "Boxed",
                               },
                               "values": {
-                                "items": [
+                                "maxItems": 2,
+                                "minItems": 2,
+                                "prefixItems": [
                                   {
                                     "type": "integer",
                                   },
@@ -1226,8 +1228,6 @@ exports[`openapi > is stable 1`] = `
                                     "type": "string",
                                   },
                                 ],
-                                "maxItems": 2,
-                                "minItems": 2,
                                 "type": "array",
                               },
                             },
@@ -2019,7 +2019,9 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "t": {
-                        "items": [
+                        "maxItems": 2,
+                        "minItems": 2,
+                        "prefixItems": [
                           {
                             "type": "integer",
                           },
@@ -2027,8 +2029,6 @@ exports[`openapi > is stable 1`] = `
                             "type": "boolean",
                           },
                         ],
-                        "maxItems": 2,
-                        "minItems": 2,
                         "type": "array",
                       },
                     },
@@ -3460,7 +3460,9 @@ exports[`openapi > is stable 1`] = `
                                 "const": "Boxed",
                               },
                               "values": {
-                                "items": [
+                                "maxItems": 2,
+                                "minItems": 2,
+                                "prefixItems": [
                                   {
                                     "type": "integer",
                                   },
@@ -3468,8 +3470,6 @@ exports[`openapi > is stable 1`] = `
                                     "type": "string",
                                   },
                                 ],
-                                "maxItems": 2,
-                                "minItems": 2,
                                 "type": "array",
                               },
                             },
@@ -4315,7 +4315,9 @@ exports[`openapi > is stable 1`] = `
                     "additionalProperties": false,
                     "properties": {
                       "t": {
-                        "items": [
+                        "maxItems": 2,
+                        "minItems": 2,
+                        "prefixItems": [
                           {
                             "type": "integer",
                           },
@@ -4323,8 +4325,6 @@ exports[`openapi > is stable 1`] = `
                             "type": "boolean",
                           },
                         ],
-                        "maxItems": 2,
-                        "minItems": 2,
                         "type": "array",
                       },
                     },

@@ -44,10 +44,10 @@ function unionSchema(v: any, spec: contract.Spec, depth: number): JsonSchema {
     const name = str(c.value.name);
     if (c.type === 'scSpecUdtUnionCaseVoidV0') return { const: name };
     const types = (c.value.type as TypeDef[]) ?? [];
-    const items = types.map((t) => typeSchema(t, spec, depth));
+    const prefixItems = types.map((t) => typeSchema(t, spec, depth));
     return {
       type: 'object',
-      properties: { tag: { const: name }, values: { type: 'array', items, minItems: items.length, maxItems: items.length } },
+      properties: { tag: { const: name }, values: { type: 'array', prefixItems, minItems: prefixItems.length, maxItems: prefixItems.length } },
       required: ['tag', 'values'],
       additionalProperties: false
     };
@@ -129,8 +129,10 @@ function typeSchema(t: TypeDef, spec: contract.Spec, depth: number): JsonSchema 
       return { type: 'object', additionalProperties: typeSchema(t.value.valueType, spec, depth), description: `Map<${k}, ${v}> as an object keyed by ${k}` };
     }
     case 'scSpecTypeTuple': {
-      const items = (t.value.valueTypes as TypeDef[]).map((x) => typeSchema(x, spec, depth));
-      return { type: 'array', items, minItems: items.length, maxItems: items.length };
+      // JSON Schema 2020-12 tuple validation: `prefixItems`, not draft-07's array-form `items`
+      // (OpenAPI 3.1 is 2020-12, and MCP's fromJsonSchema validates against 2020-12 too).
+      const prefixItems = (t.value.valueTypes as TypeDef[]).map((x) => typeSchema(x, spec, depth));
+      return { type: 'array', prefixItems, minItems: prefixItems.length, maxItems: prefixItems.length };
     }
     case 'scSpecTypeResult':
       return typeSchema(t.value.okType, spec, depth);

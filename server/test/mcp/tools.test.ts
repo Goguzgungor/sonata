@@ -63,7 +63,7 @@ describe('buildMcpServer', () => {
   it('search_functions and get_docs', async () => {
     const { client } = await connect('ro');
     const s = await client.callTool({ name: 'search_functions', arguments: { query: 'echo' } });
-    expect((s.structuredContent as any).functions.map((f: any) => f.name)).toEqual(['echo_bytes', 'echo_hash', 'echo_level', 'echo_map', 'echo_pair', 'echo_shape']);
+    expect((s.structuredContent as any).functions.map((f: any) => f.name)).toEqual(['echo_bytes', 'echo_hash', 'echo_level', 'echo_map', 'echo_pair', 'echo_shape', 'maybe', 'text', 'tuple']);
     const d = await client.callTool({ name: 'get_docs', arguments: {} });
     expect((d.content as any)[0].text).toMatch(/^# KitchenSink/);
   });

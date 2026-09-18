@@ -9,27 +9,6 @@ import { shortId } from '../docs/llms.js';
 const MAX_NAME = 64;
 const toolName = (prefix: string, fn: string) => `${prefix}${fn}`.slice(0, MAX_NAME);
 const sig = (f: ContractModel['functions'][number]) => `${f.name}(${f.inputs.map((i) => `${i.name}: ${i.type}`).join(', ')}) → ${f.output}`;
-
-/**
- * fromJsonSchema (ajv, JSON Schema 2020-12) rejects the draft-07 array form of `items`
- * (tuple validation) with "items value must be [\"object\",\"boolean\"]" — confirmed against
- * this package's actual fromJsonSchema, not assumed. spec/schema.ts (Task 3, shared with
- * OpenAPI where the draft-07 form is valid) emits that form for tuple types and tuple-shaped
- * union cases (e.g. `tuple(t: (u32, bool))`, `Shape::Boxed(u32, Symbol)` in the kitchen-sink
- * fixture). Translate it losslessly to 2020-12's `prefixItems` here, at the MCP boundary only.
- */
-function toAjvSchema(node: unknown): unknown {
-  if (Array.isArray(node)) return node.map(toAjvSchema);
-  if (!node || typeof node !== 'object') return node;
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
-    if (k === 'items' && Array.isArray(v)) { out.prefixItems = v.map(toAjvSchema); out.items = false; }
-    else out[k] = toAjvSchema(v);
-  }
-  return out;
-}
-const ajvSafe = (s: JsonSchema): JsonSchema => toAjvSchema(s) as JsonSchema;
-
 const withSource = (s: JsonSchema, required: boolean): JsonSchema => {
   const props = { ...(s.properties as object), source: { type: 'string', description: 'G… account used as transaction source' } };
   const req = [...((s.required as string[]) ?? []), ...(required ? ['source'] : [])];
@@ -53,7 +32,7 @@ export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope:
 
   for (const f of model.functions) {
     const desc = `${f.doc ? f.doc.trim() + '\n\n' : ''}${sig(f)}\nKind: ${f.kind}. Simulates on ${model.network}; nothing is signed or sent.`;
-    server.registerTool(toolName('call_', f.name), { description: desc, inputSchema: fromJsonSchema<Record<string, unknown>>(ajvSafe(withSource(f.jsonSchema, false))), outputSchema: fromJsonSchema(CALL_OUT) },
+    server.registerTool(toolName('call_', f.name), { description: desc, inputSchema: fromJsonSchema<Record<string, unknown>>(withSource(f.jsonSchema, false)), outputSchema: fromJsonSchema(CALL_OUT) },
       async (args) => {
         try {
           const { source, ...rest } = args;
@@ -64,7 +43,7 @@ export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope:
         }
       });
     if (scope === 'rw') {
-      server.registerTool(toolName('build_', f.name), { description: `Build an UNSIGNED transaction for ${sig(f)}. Returns XDR for a wallet to sign; never signs.`, inputSchema: fromJsonSchema<Record<string, unknown>>(ajvSafe(withSource(f.jsonSchema, true))), outputSchema: fromJsonSchema(BUILD_OUT) },
+      server.registerTool(toolName('build_', f.name), { description: `Build an UNSIGNED transaction for ${sig(f)}. Returns XDR for a wallet to sign; never signs.`, inputSchema: fromJsonSchema<Record<string, unknown>>(withSource(f.jsonSchema, true)), outputSchema: fromJsonSchema(BUILD_OUT) },
         async (args) => {
           try {
             const { source, ...rest } = args;
@@ -87,10 +66,10 @@ export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope:
         }
       });
   }
-  server.registerTool('search_functions', { description: 'Find contract functions by name substring, sorted alphabetically.', inputSchema: fromJsonSchema<{ query: string }>({ type: 'object', properties: { query: { type: 'string' } }, required: ['query'] }) },
+  server.registerTool('search_functions', { description: 'Find contract functions by name or purpose (case-insensitive substring on name/doc), sorted alphabetically.', inputSchema: fromJsonSchema<{ query: string }>({ type: 'object', properties: { query: { type: 'string' } }, required: ['query'] }) },
     async ({ query }) => {
       const q = query.toLowerCase();
-      const functions = model.functions.filter((f) => f.name.toLowerCase().includes(q)).map((f) => ({ name: f.name, signature: sig(f), doc: f.doc, kind: f.kind })).sort((a, b) => a.name.localeCompare(b.name));
+      const functions = model.functions.filter((f) => f.name.toLowerCase().includes(q) || f.doc.toLowerCase().includes(q)).map((f) => ({ name: f.name, signature: sig(f), doc: f.doc, kind: f.kind })).sort((a, b) => a.name.localeCompare(b.name));
       return ok({ functions });
     });
   server.registerTool('get_docs', { description: 'llms.txt for this contract: functions, types, errors, events and endpoints.', inputSchema: fromJsonSchema<Record<string, never>>({ type: 'object', properties: {} }) },

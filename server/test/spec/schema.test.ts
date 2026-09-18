@@ -63,9 +63,12 @@ describe('fnInputSchema', () => {
     expect(Array.isArray(s.properties.v.anyOf)).toBe(true);
     expect(s.properties.v.anyOf).toContainEqual({ type: 'null' });
   });
-  it('Tuple args are fixed-length arrays', () => {
+  it('Tuple args are fixed-length arrays using 2020-12 prefixItems (OpenAPI 3.1 / MCP fromJsonSchema)', () => {
     const s = fnInputSchema(spec, 'tuple') as any;
     expect(s.properties.t.type).toBe('array');
+    expect(Array.isArray(s.properties.t.prefixItems)).toBe(true);
+    expect(s.properties.t.prefixItems).toHaveLength(2);
+    expect(s.properties.t.items).toBeUndefined();
     expect(s.properties.t.minItems).toBe(2);
     expect(s.properties.t.maxItems).toBe(2);
   });
@@ -92,6 +95,9 @@ describe('udtSchema', () => {
     expect(s.oneOf).toContainEqual({ const: 'Unit' });
     const boxed = s.oneOf.find((c: any) => c.properties?.tag?.const === 'Boxed');
     expect(boxed).toMatchObject({ type: 'object', properties: { tag: { const: 'Boxed' }, values: { type: 'array' } }, required: ['tag', 'values'] });
+    expect(Array.isArray(boxed.properties.values.prefixItems)).toBe(true);
+    expect(boxed.properties.values.prefixItems).toHaveLength(2);
+    expect(boxed.properties.values.items).toBeUndefined();
   });
   it('represents a C-style enum (Level) as an integer with the codec-compatible values, not oneOf', () => {
     // spec/codec.ts round-trips these enums as plain numbers (spec.nativeToScVal(2, levelType)),
