@@ -15,23 +15,16 @@ export default function TopNav() {
   const pathname = usePathname();
   const home = pathname === '/';
   return (
-    <>
-      <header className="site-nav">
-        <Link className="brand" href="/">Sonata</Link>
-        <nav className="nav-links" aria-label="Primary">
-          {NAV.map((n, i) => (
-            <Link key={i} className={'sn-label nav-link' + (n.match(pathname) ? ' is-active' : '')} href={n.href}>{n.label}</Link>
-          ))}
-        </nav>
-        <div className="nav-right">
-          {S && <S.Chip>Testnet</S.Chip>}
-          {!home && <span className="sn-mono nav-wallet">GBX7…4Q9</span>}
-        </div>
-      </header>
-      <div className="preview-bar" role="note">
-        <span className="preview-bar__dot" aria-hidden="true" />
-        <span>Preview build · sample data<span className="preview-bar__long"> · nothing is sent to the network</span></span>
+    <header className="site-nav">
+      <Link className="brand" href="/">Sonata</Link>
+      <nav className="nav-links" aria-label="Primary">
+        {NAV.map((n, i) => (
+          <Link key={i} className={'sn-label nav-link' + (n.match(pathname) ? ' is-active' : '')} href={n.href}>{n.label}</Link>
+        ))}
+      </nav>
+      <div className="nav-right">
+        {home && S && <S.Chip>Testnet</S.Chip>}
       </div>
-    </>
+    </header>
   );
 }

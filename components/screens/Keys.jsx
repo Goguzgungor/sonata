@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSonataUI } from '@/lib/sonata';
 import { Label, ResponsiveTable } from '@/components/ui';
+import PreviewBar from '@/components/PreviewBar';
 import { NET_OPTS } from '@/components/data';
 
 const KEY_COLS = [
@@ -36,6 +37,7 @@ export default function Keys() {
   }));
   return (
     <main className="page" style={{ gap: 32 }}>
+      <PreviewBar />
       <div className="page-head">
         <h1 className="sn-h1" style={{ margin: 0 }}>API keys</h1>
         <div className="actions">

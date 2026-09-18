@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useSonataUI } from '@/lib/sonata';
 import { Label } from '@/components/ui';
+import PreviewBar from '@/components/PreviewBar';
 import { FLOWS, INTENTS, PROTOCOLS } from '@/components/flows-data';
 
 function ChipRow({ label, items, value, onChange }) {
@@ -28,6 +29,7 @@ export default function Flows() {
   const list = FLOWS.filter((f) => (intent === 'all' || f.intent === intent) && (protocol === 'all' || f.protocol === protocol));
   return (
     <main className="page" style={{ gap: 32 }}>
+      <PreviewBar />
       <div className="page-head">
         <div style={{ minWidth: 0 }}>
           <div className="sn-label sn-muted">Flow engine</div>

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSonataUI } from '@/lib/sonata';
 import { Label, CodeBox, CopyButton } from '@/components/ui';
+import PreviewBar from '@/components/PreviewBar';
 import { WELCOME_ROWS } from '@/components/data';
 import { HOME_STATS, HOME_STEPS, HOME_SURFACES, HOME_CURL, HOME_MCP } from '@/components/home-data';
 
@@ -14,6 +15,7 @@ export default function Welcome() {
   if (!S) return null;
   return (
     <main className="home">
+      <PreviewBar />
       {/* Hero: full-width staff score, then copy left + surfaces right */}
       <section className="home-section home-section--hero">
         <div className="hero-staff" aria-hidden="true">

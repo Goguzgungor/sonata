@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useSonataUI } from '@/lib/sonata';
 import { Label, CodeBox, CopyButton } from '@/components/ui';
+import PreviewBar from '@/components/PreviewBar';
 import { XDR } from '@/components/data';
 import { flowRequest, flowCurl, flowMcp } from '@/components/flows-data';
 import { PUBLIC_CONTRACTS } from '@/components/explorer-data';
@@ -17,6 +18,7 @@ export default function FlowDetail({ flow: f }) {
   const run = () => { setState('running'); setTimeout(() => setState('done'), 800); };
   return (
     <main className="page">
+      <PreviewBar />
       <div className="sn-label sn-muted"><Link className="crumb" href="/flows">Flows</Link> / {f.name}</div>
       <div className="page-head" style={{ gap: 24 }}>
         <div style={{ minWidth: 0, maxWidth: '100%' }}>
