@@ -1,5 +1,4 @@
 import ContractPublic from '@/components/screens/ContractPublic';
-import { CONTRACT_BY_ID } from '@/components/explorer-data';
 import { pageMeta } from '@/components/seo';
 import { API_URL } from '@/lib/api';
 
@@ -20,12 +19,10 @@ export async function generateMetadata({ params }) {
     const name = live.name || id.slice(0, 4) + '…' + id.slice(-4);
     return pageMeta({ title: `${name} · Explorer`, description: `${name} on Stellar ${live.network}: ${live.functions.length} functions as a REST API, MCP tools and AI-ready docs.`, path: `/explorer/${id}` });
   }
-  const c = CONTRACT_BY_ID[id];
-  if (c) return pageMeta({ title: c.name + ' · Explorer', description: c.d + ' ' + c.fns + ' functions, ' + c.tools + ' MCP tools, ' + c.category + ' on ' + c.net + '.', path: '/explorer/' + c.id });
   return pageMeta({ title: 'Contract', path: '/explorer' });
 }
 
 export default async function Page({ params }) {
   const { id } = await params;
-  return <ContractPublic id={id} demo={CONTRACT_BY_ID[id] || null} />;
+  return <ContractPublic id={id} />;
 }

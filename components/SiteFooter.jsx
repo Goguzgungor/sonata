@@ -9,7 +9,6 @@ export default function SiteFooter() {
       </div>
       <nav className="site-footer__links sn-label" aria-label="Footer">
         <Link href="/explorer">Explorer</Link>
-        <Link href="/flows">Flows</Link>
         <Link href="/docs">Docs</Link>
         <Link href="/docs/quickstart">Quickstart</Link>
         <Link href="/docs/api">REST API</Link>

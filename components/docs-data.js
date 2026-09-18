@@ -1,4 +1,32 @@
-import { CONTRACT_ID, MCP_URL, MCP_CONFIG, LLMS, DEMO_API_URL } from './data';
+const DEMO_API_URL = 'https://api.sonata.brages.uk';
+const CONTRACT_ID = 'CGA4VK53W6R2XPLZ7SM3NQ7TRH24JC7SFK3D5TPZ2XQ7WVN6M6ABCD4R';
+const MCP_URL = DEMO_API_URL + '/c/CGA4…D4R/mcp';
+const MCP_CONFIG = `{
+  "mcpServers": {
+    "sonata-stellarswap": {
+      "url": "${MCP_URL}",
+      "type": "http"
+    }
+  }
+}`;
+const LLMS = `# StellarSwap
+
+Soroban AMM + token contract. 14 functions · SEP-48.
+
+## Functions
+balance(id: Address) → i128
+transfer(from, to, amount: i128) → void
+swap(from, sell, buy, amount: i128) → i128
+
+## Types
+SwapRequest { sell, buy, amount: i128 }
+Reserve { token: Address, total: i128 }
+
+## Errors
+1 InsufficientBalance · 2 SlippageExceeded
+
+## Events
+transfer(from, to, amount) · swap(who, sold, bought)`;
 
 const SHORT = CONTRACT_ID.slice(0, 4) + '…D4R';
 

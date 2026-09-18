@@ -2,7 +2,7 @@ import { SITE_URL } from './data';
 
 export const SITE_NAME = 'Sonata';
 export const SITE_TITLE = 'Sonata — API and MCP layer for Stellar contracts';
-export const SITE_DESCRIPTION = 'Paste a Soroban contract ID and get a hosted REST API, an MCP server for AI agents, AI-ready docs and a fully indexed on-chain history in about thirty seconds. No backend, no SDK, no custody.';
+export const SITE_DESCRIPTION = 'Paste a Soroban contract ID and get a hosted REST API, an MCP server for AI agents and AI-ready docs in about thirty seconds. No backend, no SDK, no custody.';
 
 /**
  * Per-page metadata. Titles get the "· Sonata" suffix from the root template;
