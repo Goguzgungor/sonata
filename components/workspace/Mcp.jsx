@@ -22,6 +22,7 @@ export default function Mcp({ S, contract: c, id, refetch }) {
   if (!c) return null;
   const rw = scope === 'rw';
   const change = async (v) => {
+    if (saving || v === scope) return;                 // one PATCH at a time: the control is disabled, this guards stray events
     const prev = scope; setScope(v); setErr(null); setSaving(true);
     try { await contracts.patch(id, { mcp_scope: v }); refetch(); }
     catch (e) { setScope(prev); setErr(e); }
@@ -51,7 +52,10 @@ export default function Mcp({ S, contract: c, id, refetch }) {
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-        <S.Segmented ariaLabel="Scope" options={SCOPES} value={scope} onChange={change} />
+        {/* the kit's Segmented takes no `disabled` prop, so the wrapper is what blocks input while a PATCH is in flight */}
+        <div aria-busy={saving || undefined} style={saving ? { opacity: 0.55, pointerEvents: 'none' } : undefined}>
+          <S.Segmented ariaLabel="Scope" options={SCOPES} value={scope} onChange={change} />
+        </div>
         <span className="sn-small sn-muted">
           {saving ? 'Saving…' : err ? `Couldn't change scope: ${err.message}` : rw ? 'Write tools are enabled. Agents can build unsigned transactions and submit signed ones.' : 'Write tools stay disabled until you enable them explicitly. Agents never hold keys.'}
         </span>

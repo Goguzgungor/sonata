@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { Label } from '@/components/ui';
-import { relTime } from '@/lib/api';
+import { relTime, mcpToolCount } from '@/lib/api';
 
 export default function Overview({ S, contract: c, id }) {
   if (!c) return null;
@@ -9,7 +9,7 @@ export default function Overview({ S, contract: c, id }) {
   const rw = c.mcp_scope === 'rw';
   const surfaces = [
     { name: 'REST API', d: `${fns} functions · /call · /tx`, href: `/c/${id}/functions` },
-    { name: 'MCP server', d: `${rw ? fns * 2 + 3 : fns + 2} tools · ${rw ? 'read + write' : 'read-only by default'}`, href: `/c/${id}/mcp` },
+    { name: 'MCP server', d: `${mcpToolCount(c)} tools · ${rw ? 'read + write' : 'read-only by default'}`, href: `/c/${id}/mcp` },
     { name: 'Docs', d: 'llms.txt · OpenAPI 3.1', href: `/c/${id}/docs` },
     { name: 'History', d: 'preview · indexing arrives in a later release', href: `/c/${id}/history`, preview: true }
   ];

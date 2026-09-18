@@ -16,6 +16,25 @@ describe('useApi', () => {
     await act(async () => { await result.current.refetch(); });
     expect(result.current.data).toBe('ok'); expect(result.current.error).toBeNull();
   });
+  it('refetch keeps data and reports refetching', async () => {
+    let release;
+    let calls = 0;
+    const { result } = renderHook(() => useApi(async () => {
+      if (++calls === 1) return { n: 1 };
+      await new Promise((r) => { release = r; });
+      return { n: 2 };
+    }, []));
+    await waitFor(() => expect(result.current.data).toEqual({ n: 1 }));
+    let done;
+    act(() => { done = result.current.refetch(); });
+    expect(result.current.loading).toBe(false);        // no skeleton flash: data is still on screen
+    expect(result.current.refetching).toBe(true);
+    expect(result.current.data).toEqual({ n: 1 });
+    await act(async () => { release(); await done; });
+    expect(result.current.data).toEqual({ n: 2 });
+    expect(result.current.refetching).toBe(false);
+    expect(result.current.loading).toBe(false);
+  });
   it('re-runs when deps change and ignores stale results', async () => {
     const fetcher = vi.fn(async (signal, id) => { await new Promise((r) => setTimeout(r, id === 'a' ? 30 : 5)); return id; });
     const { result, rerender } = renderHook(({ id }) => useApi((signal) => fetcher(signal, id), [id]), { initialProps: { id: 'a' } });
