@@ -67,7 +67,7 @@ claude mcp add --transport http sonata https://api.sonata.brages.uk/mcp
 | `get_docs` | `{ id }` | `{ text }` | llms.txt |
 | `call` | `{ id, fn, args?, source? }` | `{ result, simulated: true, latency_ms, ledger, auth }` | Simulation; `source` optional (defaults to the configured sim account); learns read/write hints exactly like REST |
 | `build` | `{ id, fn, args?, source, fee?, timeout_s? }` | `{ xdr, fee, auth, ledger, expires_at }` | **Only if the contract's `mcp_scope` is `rw`**; otherwise `isError` `{ error: 'write_tools_disabled', message: 'the owner of <id> has not enabled write tools; ask them to switch the MCP scope to read + write' }` |
-| `submit` | `{ id, xdr }` | `{ hash, status, ledger?, fee_charged?, return_value?, result_xdr? }` | Same `rw` gate; waits ≤ 30 s |
+| `submit` | `{ id, xdr }` | `{ hash, status, ledger?, fee_charged?, return_value?, result_xdr? }` | Same `rw` gate; waits ≤ 30 s. `id` selects the network and the write gate; the envelope itself is any signed transaction on that network. |
 | `get_tx` | `{ hash, network }` | same as `submit` | Poll a pending submit |
 
 `build` and `submit` only work for a contract whose owner has switched its MCP scope to read + write (`PATCH /c/:id {mcp_scope: 'rw'}`); every other tool works regardless of scope.
@@ -130,17 +130,25 @@ server/
       store.ts                Store interface + PgStore + MemoryStore
       pipeline.ts             register(id, network, name?) with steps
       registry.ts             Registry = store + LRU + pipeline + spec cache
+      hints-policy.ts         learnKind(deps, model, fn, observed, log): the monotonic read→write hint rule, shared by REST and MCP
     docs/
       llms.ts                 llmsTxt(model, cfg)
       openapi.ts              openapi(model, cfg)
+    auth/
+      challenge.ts            SEP-10-style challenge build + verify
+      jwt.ts                  session token issue/verify
+      keys.ts                 self-generated auth_secret / auth_signing_seed, persisted via the store
     http/
       app.ts                  buildApp(deps) → Fastify instance
+      routes/auth.ts          /auth/challenge, /auth/token, /auth/me
       routes/contracts.ts     POST/GET /contracts, GET /c/:id, /status, PATCH
       routes/invoke.ts        /call, /tx, /submit, /tx/:hash
       routes/docs.ts          /llms.txt, /openapi.json, /events (501)
       routes/health.ts        /healthz
     mcp/
-      tools.ts                buildMcpServer(model, scope, deps) → McpServer
+      handlers.ts             shared tool logic (simulate, buildTx, submitTx, …) used by both MCP servers
+      tools.ts                buildMcpServer(model, scope, deps) → McpServer (per-contract)
+      global.ts               buildGlobalMcpServer(deps) → McpServer (every contract, id as an argument)
       route.ts                Fastify handler using NodeStreamableHTTPServerTransport
     main.ts                   boot
   drizzle/                    generated SQL migrations

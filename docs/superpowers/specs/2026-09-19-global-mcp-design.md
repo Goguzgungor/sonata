@@ -22,7 +22,7 @@ Per-function tools (`call_<fn>`) do not scale to the whole registry: 1,000 contr
 | Tool | Input | Output | Notes |
 |---|---|---|---|
 | `list_contracts` | `{ network?: 'testnet'|'mainnet', q?: string, include_pending?: boolean }` | `{ contracts: [{ id, name, network, status, fns, sac, owner, updated_at }] }` | Ready rows only unless `include_pending`; `q` is a case-insensitive substring on name or id; sorted by `updated_at` desc; capped at 200 |
-| `get_contract` | `{ id }` | `{ id, name, network, sac, mcp_scope, functions: [{ name, signature, doc, kind, input_schema }], types, errors, events, urls }` | The public row minus pipeline steps, with `input_schema` = the function's JSON schema (the same one `call`/`build` validate against) |
+| `get_contract` | `{ id }` | `{ id, name, network, sac, mcp_scope, owner, functions: [{ name, signature, doc, kind, input_schema }], types, errors, events, urls }` | The public row minus pipeline steps, with `input_schema` = the function's JSON schema (the same one `call`/`build` validate against) |
 | `search_functions` | `{ id, query }` | `{ functions: [{ name, signature, doc, kind }] }` | Same semantics as the per-contract tool |
 | `get_docs` | `{ id }` | `{ text }` | llms.txt |
 | `call` | `{ id, fn, args?, source? }` | `{ result, simulated: true, latency_ms, ledger, auth }` | Simulation; `source` optional (defaults to the configured sim account); learns read/write hints exactly like REST |

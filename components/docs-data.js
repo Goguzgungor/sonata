@@ -130,7 +130,7 @@ ${mcpGlobalOneLiner}` }
           { key: 'get_docs', value: '{ id } → llms.txt for the contract', mono: false },
           { key: 'call', value: '{ id, fn, args?, source? } → simulate any function, read or write', mono: false },
           { key: 'build', value: '{ id, fn, args?, source, fee?, timeout_s? } → unsigned XDR for the user’s wallet to sign', mono: false },
-          { key: 'submit', value: '{ id, xdr } → submit a signed transaction, wait up to 30 s', mono: false },
+          { key: 'submit', value: '{ id, xdr } → submit a signed transaction, wait up to 30 s. id selects the network and the write gate; the envelope itself is any signed transaction on that network.', mono: false },
           { key: 'get_tx', value: '{ hash, network } → poll a submitted transaction', mono: false }
         ] },
         { p: 'build and submit only work for a contract whose owner has switched its MCP scope to read + write; every other tool works regardless of scope. Agents never hold keys: they receive unsigned XDR and hand it to a signer.' }
