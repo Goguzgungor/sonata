@@ -2,7 +2,7 @@ import { Account, BASE_FEE, Contract, TransactionBuilder, rpc, xdr } from '@stel
 import type { Config, NetworkConfig } from '../config.js';
 import type { Network } from '../types.js';
 import type { BuiltTx, Chain, SimResult, TxStatus } from './types.js';
-import { ChainError, contractNotFound, isSacError, networkNotConfigured, parseSimulationError, rpcUnavailable, sacUnsupported, sourceNotFound } from './errors.js';
+import { ChainError, contractNotFound, isSacError, networkNotConfigured, parseSimulationError, rpcUnavailable, sacContract, sourceNotFound } from './errors.js';
 import { authAddresses } from './auth.js';
 
 const RPC_TIMEOUT_MS = 10_000;
@@ -46,7 +46,7 @@ export class RpcChain implements Chain {
       try { return await server.getContractWasmByContractId(id); }
       catch (e) {
         if (isNotFound(e)) throw contractNotFound(network, id);   // 404 → a readable 404, not the 502 rpcUnavailable fallback
-        if (isSacError(e)) throw sacUnsupported(id);
+        if (isSacError(e)) throw sacContract(id);
         throw e;
       }
     });

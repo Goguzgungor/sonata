@@ -3,7 +3,7 @@ import { Keypair } from '@stellar/stellar-sdk';
 import { testApp, OWNER } from '../helpers/app.js';
 import { signInAs, bearer } from '../helpers/session.js';
 import { FIXTURE_ID } from '../fixtures/index.js';
-import { sacUnsupported } from '../../src/chain/errors.js';
+import { sacContract } from '../../src/chain/errors.js';
 
 describe('contracts routes', () => {
   it('POST /contracts validates and returns 202 queued; status becomes ready', async () => {
@@ -21,15 +21,20 @@ describe('contracts routes', () => {
     expect(st.json()).toMatchObject({ status: 'ready' });
     expect(st.json().steps).toHaveLength(4);
   });
-  it('registering a SAC fails the fetch step with a readable sac_unsupported error', async () => {
+  it('registers a SAC from the built-in spec and exposes its token functions', async () => {
     const { app, chain, registry } = await testApp();
     const { token } = await signInAs(app, Keypair.random());
-    chain.impl.getContractWasm = async () => { throw sacUnsupported(FIXTURE_ID); };
-    await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet' }, headers: bearer(token) });
+    chain.impl.getContractWasm = async () => { throw sacContract(FIXTURE_ID); };
+    await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'XLM' }, headers: bearer(token) });
     await registry.whenIdle();
     const st = (await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/status` })).json();
-    expect(st.status).toBe('failed');
-    expect(st.steps[0]).toMatchObject({ name: 'fetch', status: 'failed', error: expect.stringContaining('Stellar Asset Contract') });
+    expect(st.status).toBe('ready');
+    const c = (await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}` })).json();
+    expect(c.sac).toBe(true);
+    expect(c.functions.map((f: any) => f.name)).toEqual(expect.arrayContaining(['balance', 'transfer', 'approve', 'decimals', 'symbol']));
+    expect(c.functions.find((f: any) => f.name === 'balance').kind).toBe('read');
+    const llms = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/llms.txt` });
+    expect(llms.body).toContain('Stellar Asset Contract');
   });
   it('GET /contracts lists; GET /c/:id returns model + settings + urls; 404 unknown', async () => {
     const { app, registerFixture } = await testApp(); await registerFixture();

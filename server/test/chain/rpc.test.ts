@@ -77,9 +77,9 @@ describe('RpcChain.getContractWasm', () => {
       status: 404, error: 'contract_not_found', message: `contract ${FIXTURE_ID} does not exist on testnet`
     });
   });
-  it('maps the SDK\'s SAC rejection to 400 sac_unsupported', async () => {
+  it('maps the SDK\'s SAC rejection to 400 sac_contract', async () => {
     const server = { getContractWasmByContractId: vi.fn().mockRejectedValue(new Error(`Contract ${FIXTURE_ID} is a Stellar Asset Contract (SAC), which has no Wasm bytecode. Use contract.getSpec instead.`)) };
-    await expect(chainWith(server).getContractWasm('testnet', FIXTURE_ID)).rejects.toMatchObject({ status: 400, error: 'sac_unsupported', message: expect.stringContaining('Stellar Asset Contract') });
+    await expect(chainWith(server).getContractWasm('testnet', FIXTURE_ID)).rejects.toMatchObject({ status: 400, error: 'sac_contract', message: expect.stringContaining('Stellar Asset Contract') });
   });
   it('still reports a real RPC failure as 502', async () => {
     const server = { getContractWasmByContractId: vi.fn().mockRejectedValue(new Error('connect ECONNREFUSED')) };

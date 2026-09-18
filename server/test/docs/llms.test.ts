@@ -40,5 +40,9 @@ describe('llmsTxt', () => {
   it('falls back to the short id when unnamed', () => {
     expect(llmsTxt({ ...model, name: null }, cfg)).toMatch(/^# CAAA…BSC4/);
   });
+  it('labels a Stellar Asset Contract on the second line', () => {
+    const line2 = llmsTxt({ ...model, sac: true }, cfg).split('\n')[2];
+    expect(line2.startsWith('Stellar Asset Contract (SEP-41 token) · ')).toBe(true);
+  });
   it('is stable', () => { expect(out).toMatchSnapshot(); });
 });

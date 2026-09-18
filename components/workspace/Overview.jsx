@@ -44,8 +44,9 @@ export default function Overview({ S, contract: c, id }) {
           <div style={{ marginTop: 16 }}>
             <S.KeyValueList rows={[
               { key: 'Network', value: c.network, mono: false },
+              { key: 'Type', value: c.sac ? 'Stellar Asset Contract (SEP-41 token)' : 'Soroban WASM contract', mono: false },
               { key: 'Contract ID', value: <a className="crumb" href={expertUrl(c.network, 'contract', c.id)} target="_blank" rel="noreferrer">{c.id}</a> },
-              { key: 'WASM hash', value: c.wasmHash.slice(0, 12) + '…' },
+              { key: 'WASM hash', value: c.sac ? 'built-in spec' : c.wasmHash.slice(0, 12) + '…' },
               { key: 'Registered', value: relTime(c.created_at), mono: false },
               { key: 'Status', value: c.status, mono: false },
               { key: 'MCP scope', value: rw ? 'read + write' : 'read-only', mono: false },

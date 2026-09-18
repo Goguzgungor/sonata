@@ -5,7 +5,7 @@ import { renderInputs, renderOutput, renderType } from './render.js';
 import { classifyByName } from './hints.js';
 import { fnInputSchema, udtSchema } from './schema.js';
 
-export type ModelMeta = { id: string; network: Network; name: string | null; wasmHash: string; specLedger: number };
+export type ModelMeta = { id: string; network: Network; name: string | null; wasmHash: string; specLedger: number; sac?: boolean };
 
 export const wasmHashOf = (wasm: Buffer): string => createHash('sha256').update(wasm).digest('hex');
 

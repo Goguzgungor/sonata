@@ -105,7 +105,7 @@ curl -X POST "${API_URL}/c/{contractId}/submit" \\
 { "error": "TooBig", "message": "The number was too big.", "code": 1, "details": { "fn": "checked" } }` }
       ] },
       { h: 'Authentication and limits', blocks: [
-        { p: 'Registering a contract or changing its settings needs a session: sign a SEP-10-style challenge with your wallet to get a bearer token valid for 24 hours. Reads, simulation, transaction building and submission need no session. The API allows 120 requests per minute per IP. Stellar Asset Contracts (SACs) are not supported and return sac_unsupported.' }
+        { p: 'Registering a contract or changing its settings needs a session: sign a SEP-10-style challenge with your wallet to get a bearer token valid for 24 hours. Reads, simulation, transaction building and submission need no session. The API allows 120 requests per minute per IP. Stellar Asset Contracts (XLM, USDC, …) are supported through the built-in token interface.' }
       ] }
     ]
   },

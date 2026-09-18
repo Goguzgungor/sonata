@@ -2,6 +2,8 @@ import { contract } from '@stellar/stellar-sdk';
 import type { Chain } from '../chain/types.js';
 import type { ContractModel, JsonSchema, Network, Step } from '../types.js';
 import { buildModel, parseWasm, wasmHashOf } from '../spec/model.js';
+import { isSacContract } from '../chain/errors.js';
+import { sacSpec, SAC_WASM_HASH } from '../spec/sacSpec.js';
 import type { Store } from './store.js';
 
 export type Generators = { llmsTxt: (m: ContractModel) => string; openapi: (m: ContractModel) => JsonSchema };
@@ -19,8 +21,12 @@ export async function runPipeline(deps: { store: Store; chain: Chain; gen: Gener
   };
   try {
     const existing = await store.get(id);
-    const wasm = await run(0, async () => { const w = await chain.getContractWasm(network, id); return { value: w, detail: `${(w.length / 1024).toFixed(1)} KB` }; });
-    const wasmHash = wasmHashOf(wasm);
+    const fetched = await run(0, async () => {
+      try { const w = await chain.getContractWasm(network, id); return { value: { wasm: w as Buffer | null }, detail: `${(w.length / 1024).toFixed(1)} KB` }; }
+      catch (e) { if (isSacContract(e)) return { value: { wasm: null }, detail: 'Stellar Asset Contract · built-in SEP-41 spec' }; throw e; }
+    });
+    const sac = fetched.wasm === null;
+    const wasmHash = sac ? SAC_WASM_HASH : wasmHashOf(fetched.wasm!);
     if (existing?.wasmHash === wasmHash && existing.model && existing.specXdr) {   // unchanged upgrade → nothing to re-parse
       for (const s of steps) { s.status = 'done'; s.detail = 'unchanged'; } steps[3].status = 'skipped';
       // upsertQueued has already stored a newly supplied name; the model and the generated docs embed
@@ -31,13 +37,13 @@ export async function runPipeline(deps: { store: Store; chain: Chain; gen: Gener
       return;
     }
     const spec = await run(1, async () => {
-      const s = parseWasm(wasm);
+      const s = sac ? sacSpec() : parseWasm(fetched.wasm!);
       const n = (t: string) => (s.entries as unknown as Array<{ type: string }>).filter((e) => e.type.startsWith(t)).length;
       const types = n('scSpecEntryUdtStructV0') + n('scSpecEntryUdtUnionV0') + n('scSpecEntryUdtEnumV0');
-      return { value: s, detail: `${s.funcs().length} functions · ${types} types · ${s.errorCases().length} errors` };
+      return { value: s, detail: `${s.funcs().length} functions · ${types} types · ${s.errorCases().length} errors${sac ? ' · built-in' : ''}` };
     });
     const hints = await store.getHints(id);
-    const model = buildModel(spec, { id, network, name: existing?.name ?? null, wasmHash, specLedger: 0 }, hints);
+    const model = buildModel(spec, { id, network, name: existing?.name ?? null, wasmHash, specLedger: 0, sac }, hints);
     await run(2, async () => {
       const llms = gen.llmsTxt(model); const oa = gen.openapi(model);
       const tools = model.functions.length * 2 + 3;

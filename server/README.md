@@ -26,7 +26,7 @@ Base URL `PUBLIC_BASE_URL` (prod: `https://api.sonata.brages.uk`). JSON everywhe
 | `GET /auth/me` | Whoami for the bearer token | `200 {address, expires_at}` |
 | `POST /contracts` `{id, network, name?}` | Register / re-check — session required (owner) | `202 {id, network, status, steps}` |
 | `GET /contracts` `?owner=me` | Registered list, or just the caller's (`?owner=me` needs a session) | `200 [{id, name, network, status, fns, owner, created_at, updated_at}]` |
-| `GET /c/:id` | Model + settings | `200 {…ContractModel, mcp_scope, status, urls: {mcp, llms, openapi, explorer}}` |
+| `GET /c/:id` | Model + settings | `200 {…ContractModel (sac? true for a Stellar Asset Contract), mcp_scope, status, urls: {mcp, llms, openapi, explorer}}` |
 | `GET /c/:id/status` | Pipeline steps | `200 {status, steps, error?}` |
 | `PATCH /c/:id` `{name?, mcp_scope?}` | Settings — session required (owner) | `200 {…same as GET}` |
 | `POST /c/:id/call/:fn` `{args, source?, network?}` | Simulate any function | `200 {result, simulated: true, latency_ms, ledger, auth: string[]}` |
@@ -38,7 +38,7 @@ Base URL `PUBLIC_BASE_URL` (prod: `https://api.sonata.brages.uk`). JSON everywhe
 | `GET /c/:id/events` | History | `501 {error: 'not_indexed'}` |
 | `GET /healthz` | Liveness | `200 {db: 'ok', networks: {testnet: 'ok'}}` |
 
-`return_value` is the invocation's returned ScVal (base64), present on success only; `result_xdr` is the whole `TransactionResult` (base64), present on success and failure. A submit is never retried, and `DUPLICATE` / `TRY_AGAIN_LATER` from the RPC are reported as `pending` (then polled), not as an error — only `ERROR` is `422 submit_rejected`. Registering an id that is a Stellar Asset Contract (SAC) rather than a WASM contract fails the `fetch` step with `400 sac_unsupported` — SAC support is planned for a later release.
+`return_value` is the invocation's returned ScVal (base64), present on success only; `result_xdr` is the whole `TransactionResult` (base64), present on success and failure. A submit is never retried, and `DUPLICATE` / `TRY_AGAIN_LATER` from the RPC are reported as `pending` (then polled), not as an error — only `ERROR` is `422 submit_rejected`. Stellar Asset Contracts (classic assets such as XLM or USDC) have no WASM; they register from the built-in SEP-41 token spec and expose `balance`, `transfer`, `approve`, … like any other contract (`sac: true` in `GET /c/:id`).
 
 **Ownership.** `POST /contracts` and `PATCH /c/:id` require a session: the wallet signs a SEP-10 challenge from `POST /auth/challenge`, submits it to `POST /auth/token`, and gets back a 24 h bearer token to send as `Authorization: Bearer <token>`. The first wallet to register a contract owns it; rows registered before this release have no owner and are claimed by the first wallet that registers or patches them.
 

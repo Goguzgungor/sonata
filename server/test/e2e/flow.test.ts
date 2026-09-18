@@ -18,12 +18,12 @@ if (existsSync('.env.test')) for (const l of readFileSync('.env.test', 'utf8').s
 // nightly job runs the suite with no E2E env at all (review finding M-b).
 const ID = process.env.E2E_CONTRACT_ID ?? ''; const SECRET = process.env.E2E_SECRET_KEY ?? '';
 
-let app: ReturnType<typeof buildApp>, base: string, kp: Keypair, G: string, token: string;
+let app: ReturnType<typeof buildApp>, base: string, kp: Keypair, G: string, token: string, registry: Registry;
 const setUp = async () => {
   kp = Keypair.fromSecret(SECRET); G = kp.publicKey();
   const cfg = loadConfig({ DATABASE_URL: 'postgres://unused', PUBLIC_BASE_URL: 'http://127.0.0.1' });
   const chain = new RpcChain(cfg); const store = new MemoryStore();
-  const registry = new Registry({ store, chain, gen: { llmsTxt: (m) => llmsTxt(m, cfg), openapi: (m) => openapi(m, cfg) } });
+  registry = new Registry({ store, chain, gen: { llmsTxt: (m) => llmsTxt(m, cfg), openapi: (m) => openapi(m, cfg) } });
   const keys = await loadAuthKeys(store, {});
   const challenge = { signing: keys.signing, homeDomain: cfg.authHomeDomain, webAuthDomain: '127.0.0.1' };
   const auth = { keys, challenge, verifier: new ChallengeVerifier(challenge) };
@@ -80,4 +80,16 @@ describe.skipIf(!ID || !SECRET)('e2e on testnet', () => {
     expect((b.structuredContent as any).xdr).toMatch(/^AAAA/);
     await client.close();
   }, 60_000);
+  it('a Stellar Asset Contract registers from the built-in spec and answers reads', async () => {
+    const SAC = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';   // testnet native XLM
+    await app.inject({ method: 'POST', url: '/contracts', payload: { id: SAC, network: 'testnet', name: 'XLM' }, headers: { authorization: `Bearer ${token}` } });
+    await registry.whenIdle();
+    expect((await app.inject({ method: 'GET', url: `/c/${SAC}/status` })).json()).toMatchObject({ status: 'ready' });
+    const dec = await post(`/c/${SAC}/call/decimals`, { args: {} });
+    expect(dec.json()).toMatchObject({ result: 7 });
+    const bal = await post(`/c/${SAC}/call/balance`, { args: { id: G } });
+    expect(bal.json().result).toMatch(/^\d+$/);
+    const built = await post(`/c/${SAC}/tx/transfer`, { args: { from: G, to: G, amount: '1' }, source: G });
+    expect(built.statusCode, built.body).toBe(200); expect(built.json().auth).toEqual([G]);
+  }, 90_000);
 });

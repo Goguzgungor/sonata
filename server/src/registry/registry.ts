@@ -96,7 +96,7 @@ export class Registry {
     const { cached } = await this.ensureCache(id);
     await this.deps.store.setHint(id, fn, kind);
     const hints = await this.deps.store.getHints(id);
-    const model = buildModel(cached.spec, { id: cached.model.id, network: cached.model.network, name: cached.model.name, wasmHash: cached.model.wasmHash, specLedger: cached.model.specLedger }, hints);
+    const model = buildModel(cached.spec, { id: cached.model.id, network: cached.model.network, name: cached.model.name, wasmHash: cached.model.wasmHash, specLedger: cached.model.specLedger, sac: cached.model.sac }, hints);
     cached.model = model;
     await this.deps.store.update(id, { model });
   }
