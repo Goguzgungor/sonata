@@ -5,7 +5,7 @@ export default function SiteFooter() {
     <footer className="site-footer">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
         <Link className="brand" href="/">Sonata</Link>
-        <div className="sn-small sn-muted">API and MCP layer for Stellar contracts. Preview build with sample data.</div>
+        <div className="sn-small sn-muted">API and MCP layer for Stellar contracts.</div>
       </div>
       <nav className="site-footer__links sn-label" aria-label="Footer">
         <Link href="/explorer">Explorer</Link>
