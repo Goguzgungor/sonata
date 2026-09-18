@@ -3,6 +3,7 @@ import { Keypair } from '@stellar/stellar-sdk';
 import { testApp, OWNER } from '../helpers/app.js';
 import { signInAs, bearer } from '../helpers/session.js';
 import { FIXTURE_ID } from '../fixtures/index.js';
+import { sacUnsupported } from '../../src/chain/errors.js';
 
 describe('contracts routes', () => {
   it('POST /contracts validates and returns 202 queued; status becomes ready', async () => {
@@ -19,6 +20,16 @@ describe('contracts routes', () => {
     const st = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/status` });
     expect(st.json()).toMatchObject({ status: 'ready' });
     expect(st.json().steps).toHaveLength(4);
+  });
+  it('registering a SAC fails the fetch step with a readable sac_unsupported error', async () => {
+    const { app, chain, registry } = await testApp();
+    const { token } = await signInAs(app, Keypair.random());
+    chain.impl.getContractWasm = async () => { throw sacUnsupported(FIXTURE_ID); };
+    await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet' }, headers: bearer(token) });
+    await registry.whenIdle();
+    const st = (await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/status` })).json();
+    expect(st.status).toBe('failed');
+    expect(st.steps[0]).toMatchObject({ name: 'fetch', status: 'failed', error: expect.stringContaining('Stellar Asset Contract') });
   });
   it('GET /contracts lists; GET /c/:id returns model + settings + urls; 404 unknown', async () => {
     const { app, registerFixture } = await testApp(); await registerFixture();
