@@ -1,6 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
+import { Keypair } from '@stellar/stellar-sdk';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { testApp } from '../helpers/app.js';
+import { signInAs, bearer } from '../helpers/session.js';
 import { FIXTURE_ID } from '../fixtures/index.js';
 
 // Each test assigns the app it created here; afterEach closes it unconditionally (fastify's
@@ -11,8 +13,11 @@ afterEach(async () => { await app?.close(); app = undefined; });
 
 describe('ALL /c/:id/mcp', () => {
   it('serves MCP over Streamable HTTP, stateless, honoring the stored scope', async () => {
-    const t = await testApp(); await t.registerFixture();
+    const t = await testApp();
     app = t.app;
+    const { token } = await signInAs(t.app, Keypair.random());
+    await t.app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'KitchenSink' }, headers: bearer(token) });
+    await t.registry.whenIdle();
     await t.app.listen({ port: 0, host: '127.0.0.1' });
     const port = (t.app.server.address() as any).port;
     const url = new URL(`http://127.0.0.1:${port}/c/${FIXTURE_ID}/mcp`);
@@ -20,7 +25,7 @@ describe('ALL /c/:id/mcp', () => {
     await client.connect(new StreamableHTTPClientTransport(url));
     expect((await client.listTools()).tools.some((x) => x.name === 'build_ping')).toBe(false);
     await client.close();
-    await t.app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { mcp_scope: 'rw' } });
+    await t.app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { mcp_scope: 'rw' }, headers: bearer(token) });
     const client2 = new Client({ name: 't', version: '0' });
     await client2.connect(new StreamableHTTPClientTransport(url));
     expect((await client2.listTools()).tools.some((x) => x.name === 'build_ping')).toBe(true);

@@ -9,6 +9,8 @@ import { MemoryStore } from '../../src/registry/store.js';
 import { Registry } from '../../src/registry/registry.js';
 import { llmsTxt } from '../../src/docs/llms.js';
 import { openapi } from '../../src/docs/openapi.js';
+import { loadAuthKeys } from '../../src/auth/keys.js';
+import { ChallengeVerifier } from '../../src/auth/challenge.js';
 import { buildApp } from '../../src/http/app.js';
 
 if (existsSync('.env.test')) for (const l of readFileSync('.env.test', 'utf8').split('\n')) { const m = /^(\w+)=(.*)$/.exec(l.trim()); if (m && !process.env[m[1]]) process.env[m[1]] = m[2]; }
@@ -16,16 +18,23 @@ if (existsSync('.env.test')) for (const l of readFileSync('.env.test', 'utf8').s
 // nightly job runs the suite with no E2E env at all (review finding M-b).
 const ID = process.env.E2E_CONTRACT_ID ?? ''; const SECRET = process.env.E2E_SECRET_KEY ?? '';
 
-let app: ReturnType<typeof buildApp>, base: string, kp: Keypair, G: string;
+let app: ReturnType<typeof buildApp>, base: string, kp: Keypair, G: string, token: string;
 const setUp = async () => {
   kp = Keypair.fromSecret(SECRET); G = kp.publicKey();
   const cfg = loadConfig({ DATABASE_URL: 'postgres://unused', PUBLIC_BASE_URL: 'http://127.0.0.1' });
   const chain = new RpcChain(cfg); const store = new MemoryStore();
   const registry = new Registry({ store, chain, gen: { llmsTxt: (m) => llmsTxt(m, cfg), openapi: (m) => openapi(m, cfg) } });
-  app = buildApp({ cfg, chain, registry, store, log: pino({ level: 'warn' }) });
+  const keys = await loadAuthKeys(store, {});
+  const challenge = { signing: keys.signing, homeDomain: cfg.authHomeDomain, webAuthDomain: '127.0.0.1' };
+  const auth = { keys, challenge, verifier: new ChallengeVerifier(challenge) };
+  app = buildApp({ cfg, chain, registry, store, log: pino({ level: 'warn' }), auth });
   await app.listen({ port: 0, host: '127.0.0.1' });
   base = `http://127.0.0.1:${(app.server.address() as any).port}`;
-  await app.inject({ method: 'POST', url: '/contracts', payload: { id: ID, network: 'testnet', name: 'KitchenSink' } });
+  const ch = await app.inject({ method: 'POST', url: '/auth/challenge', payload: { address: G, network: 'testnet' } });
+  const challengeTx = TransactionBuilder.fromXDR(ch.json().transaction, PASSPHRASES.testnet); challengeTx.sign(kp);
+  const tok = await app.inject({ method: 'POST', url: '/auth/token', payload: { transaction: challengeTx.toXDR(), network: 'testnet' } });
+  token = tok.json().token;
+  await app.inject({ method: 'POST', url: '/contracts', payload: { id: ID, network: 'testnet', name: 'KitchenSink' }, headers: { authorization: `Bearer ${token}` } });
   await registry.whenIdle();
 };
 
@@ -62,7 +71,7 @@ describe.skipIf(!ID || !SECRET)('e2e on testnet', () => {
     expect(sub.json().ledger).toBeGreaterThan(0);
   }, 90_000);
   it('MCP: call and build over Streamable HTTP', async () => {
-    await app.inject({ method: 'PATCH', url: `/c/${ID}`, payload: { mcp_scope: 'rw' } });
+    await app.inject({ method: 'PATCH', url: `/c/${ID}`, payload: { mcp_scope: 'rw' }, headers: { authorization: `Bearer ${token}` } });
     const client = new Client({ name: 'e2e', version: '0' });
     await client.connect(new StreamableHTTPClientTransport(new URL(`${base}/c/${ID}/mcp`)));
     const r = await client.callTool({ name: 'call_get_count', arguments: {} });

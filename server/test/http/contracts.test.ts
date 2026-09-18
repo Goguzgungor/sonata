@@ -1,15 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
-import { testApp } from '../helpers/app.js';
+import { Keypair } from '@stellar/stellar-sdk';
+import { testApp, OWNER } from '../helpers/app.js';
+import { signInAs, bearer } from '../helpers/session.js';
 import { FIXTURE_ID } from '../fixtures/index.js';
 
 describe('contracts routes', () => {
   it('POST /contracts validates and returns 202 queued; status becomes ready', async () => {
     const { app, registry } = await testApp();
-    const bad = await app.inject({ method: 'POST', url: '/contracts', payload: { id: 'nope', network: 'testnet' } });
+    const { token } = await signInAs(app, Keypair.random());
+    const bad = await app.inject({ method: 'POST', url: '/contracts', payload: { id: 'nope', network: 'testnet' }, headers: bearer(token) });
     expect(bad.statusCode).toBe(400); expect(bad.json().error).toBe('invalid_contract_id');
-    const badNet = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'futurenet' } });
+    const badNet = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'futurenet' }, headers: bearer(token) });
     expect(badNet.statusCode).toBe(400); expect(badNet.json().error).toBe('invalid_args');
-    const res = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'KitchenSink' } });
+    const res = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'KitchenSink' }, headers: bearer(token) });
     expect(res.statusCode).toBe(202);
     expect(res.json()).toMatchObject({ id: FIXTURE_ID, network: 'testnet', status: 'queued' });
     await registry.whenIdle();
@@ -20,7 +23,7 @@ describe('contracts routes', () => {
   it('GET /contracts lists; GET /c/:id returns model + settings + urls; 404 unknown', async () => {
     const { app, registerFixture } = await testApp(); await registerFixture();
     const list = await app.inject({ method: 'GET', url: '/contracts' });
-    expect(list.json()).toEqual([{ id: FIXTURE_ID, name: 'KitchenSink', network: 'testnet', status: 'ready', fns: 16, updated_at: expect.any(String) }]);
+    expect(list.json()).toEqual([{ id: FIXTURE_ID, name: 'KitchenSink', network: 'testnet', status: 'ready', fns: 16, owner: OWNER, created_at: expect.any(String), updated_at: expect.any(String) }]);
     const one = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}` });
     expect(one.statusCode).toBe(200);
     expect(one.json()).toMatchObject({ id: FIXTURE_ID, mcp_scope: 'ro', status: 'ready', urls: { mcp: `https://api.sonata.test/c/${FIXTURE_ID}/mcp`, llms: `https://api.sonata.test/c/${FIXTURE_ID}/llms.txt`, openapi: `https://api.sonata.test/c/${FIXTURE_ID}/openapi.json` } });
@@ -28,15 +31,21 @@ describe('contracts routes', () => {
     expect((await app.inject({ method: 'GET', url: '/c/CNOPE' })).statusCode).toBe(404);
   });
   it('PATCH /c/:id updates name and scope, rejects bad scope', async () => {
-    const { app, registerFixture } = await testApp(); await registerFixture();
-    const ok = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { mcp_scope: 'rw', name: 'KS' } });
+    const { app, registry } = await testApp();
+    const { token } = await signInAs(app, Keypair.random());
+    await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'KitchenSink' }, headers: bearer(token) });
+    await registry.whenIdle();
+    const ok = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { mcp_scope: 'rw', name: 'KS' }, headers: bearer(token) });
     expect(ok.json()).toMatchObject({ mcp_scope: 'rw', name: 'KS' });
-    const bad = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { mcp_scope: 'admin' } });
+    const bad = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { mcp_scope: 'admin' }, headers: bearer(token) });
     expect(bad.statusCode).toBe(400);
   });
   it('PATCH /c/:id regenerates llms.txt and openapi.json with the new name', async () => {
-    const { app, registerFixture } = await testApp(); await registerFixture();
-    const patched = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { name: 'Renamed' } });
+    const { app, registry } = await testApp();
+    const { token } = await signInAs(app, Keypair.random());
+    await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'KitchenSink' }, headers: bearer(token) });
+    await registry.whenIdle();
+    const patched = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { name: 'Renamed' }, headers: bearer(token) });
     expect(patched.json()).toMatchObject({ name: 'Renamed' });
     const llms = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/llms.txt` });
     expect(llms.body).toMatch(/^# Renamed/);
@@ -44,17 +53,64 @@ describe('contracts routes', () => {
     expect(oa.json().info.title).toContain('Renamed');
   });
   it('re-registering with a new name regenerates the docs even though the wasm is unchanged', async () => {
-    const { app, registerFixture, registry } = await testApp(); await registerFixture();
-    await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'Second' } });
+    const { app, registry } = await testApp();
+    const { token } = await signInAs(app, Keypair.random());
+    await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'KitchenSink' }, headers: bearer(token) });
+    await registry.whenIdle();
+    await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'Second' }, headers: bearer(token) });
     await registry.whenIdle();
     expect((await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/llms.txt` })).body).toMatch(/^# Second/);
     expect((await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/openapi.json` })).json().info.title).toContain('Second');
   });
   it('POST /contracts is 400 network_not_configured when the network has no RPC configured', async () => {
     const { app } = await testApp({ RPC_URL_MAINNET: undefined });
-    const res = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'mainnet' } });
+    const { token } = await signInAs(app, Keypair.random());
+    const res = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'mainnet' }, headers: bearer(token) });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toBe('network_not_configured');
+  });
+  it('POST /contracts and PATCH /c/:id require a session', async () => {
+    const { app, registerFixture } = await testApp(); await registerFixture();
+    const post = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet' } });
+    expect(post.statusCode).toBe(401); expect(post.json().error).toBe('unauthorized');
+    const patch = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { name: 'X' } });
+    expect(patch.statusCode).toBe(401);
+  });
+  it('the registering wallet owns the contract; another wallet gets 403 not_owner', async () => {
+    const { app, registry } = await testApp();
+    const alice = await signInAs(app, Keypair.random()); const bob = await signInAs(app, Keypair.random());
+    const res = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet', name: 'KS' }, headers: bearer(alice.token) });
+    expect(res.statusCode).toBe(202); await registry.whenIdle();
+    expect((await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}` })).json().owner).toBe(alice.address);
+    const again = await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet' }, headers: bearer(bob.token) });
+    expect(again.statusCode).toBe(403); expect(again.json()).toMatchObject({ error: 'not_owner', details: { owner: alice.address } });
+    const patch = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { mcp_scope: 'rw' }, headers: bearer(bob.token) });
+    expect(patch.statusCode).toBe(403);
+    const ok = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { mcp_scope: 'rw' }, headers: bearer(alice.token) });
+    expect(ok.statusCode).toBe(200); expect(ok.json().mcp_scope).toBe('rw');
+    const list = await app.inject({ method: 'GET', url: '/contracts' });
+    expect(list.json()[0]).toMatchObject({ id: FIXTURE_ID, owner: alice.address, created_at: expect.any(String) });
+  });
+  it('a legacy (ownerless) contract is claimed by the first wallet that registers or patches it', async () => {
+    const { app, registry, store } = await testApp();
+    await registry.register(FIXTURE_ID, 'testnet', 'Legacy', null); await registry.whenIdle();
+    expect((await store.get(FIXTURE_ID))!.owner).toBeNull();
+    const carol = await signInAs(app, Keypair.random());
+    const patch = await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { name: 'Claimed' }, headers: bearer(carol.token) });
+    expect(patch.statusCode).toBe(200); expect(patch.json()).toMatchObject({ name: 'Claimed', owner: carol.address });
+    const dave = await signInAs(app, Keypair.random());
+    expect((await app.inject({ method: 'PATCH', url: `/c/${FIXTURE_ID}`, payload: { name: 'Nope' }, headers: bearer(dave.token) })).statusCode).toBe(403);
+  });
+  it('GET /contracts?owner=me lists only the caller\'s contracts and needs a session', async () => {
+    const { app, registry } = await testApp();
+    const alice = await signInAs(app, Keypair.random());
+    await app.inject({ method: 'POST', url: '/contracts', payload: { id: FIXTURE_ID, network: 'testnet' }, headers: bearer(alice.token) });
+    await registry.register('CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC', 'testnet', 'Other', 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H');
+    await registry.whenIdle();
+    expect((await app.inject({ method: 'GET', url: '/contracts' })).json()).toHaveLength(2);
+    const mine = await app.inject({ method: 'GET', url: '/contracts?owner=me', headers: bearer(alice.token) });
+    expect(mine.json().map((c: any) => c.id)).toEqual([FIXTURE_ID]);
+    expect((await app.inject({ method: 'GET', url: '/contracts?owner=me' })).statusCode).toBe(401);
   });
   it('GET /nope is 404 route_not_found', async () => {
     const { app } = await testApp();
