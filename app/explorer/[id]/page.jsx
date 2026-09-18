@@ -1,19 +1,17 @@
 import ContractPublic from '@/components/screens/ContractPublic';
 import { CONTRACT_BY_ID } from '@/components/explorer-data';
 import { pageMeta } from '@/components/seo';
+import { API_URL } from '@/lib/api';
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/+$/, '');
-
+/** Metadata only: a title/description a minute out of date is fine, and the page itself refetches on the client. */
 async function fetchContract(id) {
   try {
-    const res = await fetch(`${API_URL}/c/${id}`, { signal: AbortSignal.timeout(3000), cache: 'no-store' });
+    const res = await fetch(`${API_URL}/c/${id}`, { signal: AbortSignal.timeout(1500), next: { revalidate: 60 } });
     if (!res.ok) return null;
     const c = await res.json();
     return c.status === 'ready' ? c : null;
   } catch { return null; }
 }
-
-export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;

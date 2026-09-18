@@ -2,12 +2,14 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSonataUI } from '@/lib/sonata';
-import { contracts, shortId, relTime } from '@/lib/api';
+import { contracts, shortId, relTime, mcpToolCount } from '@/lib/api';
 import { useApi } from '@/lib/useApi';
 import Async from '@/components/Async';
+import NotRegistered from '@/components/NotRegistered';
 import PreviewBar from '@/components/PreviewBar';
 import { Label, CodeBox, CopyButton, ResponsiveTable } from '@/components/ui';
 import { mcpConfig } from '@/components/workspace/Mcp';
+import { PipelineSteps, STATUS } from '@/components/workspace/Workspace';
 import { PUBLIC_FNS, fmt } from '@/components/explorer-data';
 
 const FN_COLS = [
@@ -38,7 +40,7 @@ function Live({ S, c, router }) {
       </div>
       <div className="sn-stat-row">
         <S.Stat label="Functions" value={String(c.functions.length)} />
-        <S.Stat label="MCP tools" value={String(c.mcp_scope === 'rw' ? c.functions.length * 2 + 3 : c.functions.length + 2)} />
+        <S.Stat label="MCP tools" value={String(mcpToolCount(c))} />
         <S.Stat label="Types" value={String(c.types.length)} />
         <S.Stat label="Updated" value={relTime(c.updated_at)} />
       </div>
@@ -49,7 +51,7 @@ function Live({ S, c, router }) {
             { key: 'Network', value: c.network, mono: false }, { key: 'Spec', value: 'SEP-48' },
             { key: 'AI docs', value: <a className="crumb" href={c.urls.llms} target="_blank" rel="noreferrer">llms.txt</a> },
             { key: 'OpenAPI', value: <a className="crumb" href={c.urls.openapi} target="_blank" rel="noreferrer">openapi.json</a> },
-            { key: 'Base URL', value: c.urls.base || contracts.urls(c.id).base }
+            { key: 'Base URL', value: contracts.urls(c.id).base }   // the API's `urls` has no `base`
           ]} />
         </div>
         <div>
@@ -95,24 +97,52 @@ function Demo({ S, c, router }) {   // the previous demo rendering, unchanged in
   );
 }
 
+/** Registered but not indexed yet: the real row the API returned (no model, so no functions and no stats to show). */
+function Registering({ S, c }) {
+  const [tone, label] = STATUS[c.status] || STATUS.queued;
+  const failed = c.status === 'failed';
+  return (
+    <>
+      <div className="page-head" style={{ gap: 24 }}>
+        <div style={{ minWidth: 0, maxWidth: '100%' }}>
+          <h1 className="sn-h1">{c.name || shortId(c.id)}</h1>
+          <p className="sn-body sn-muted" style={{ marginTop: 10, maxWidth: 560 }}>
+            {failed ? 'Registration failed, so this contract has no generated API yet.' : 'Registration in progress. The REST API, MCP tools and docs appear here once the pipeline finishes.'}
+          </p>
+          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <span className="sn-mono" style={{ overflowWrap: 'anywhere' }}>{c.id}</span>
+            <CopyButton S={S} text={c.id}>Copy</CopyButton>
+            <S.Chip tone={c.network === 'mainnet' ? 'inverse' : 'neutral'}>{c.network === 'mainnet' ? 'Mainnet' : 'Testnet'}</S.Chip>
+            <S.Chip tone={tone}>{label}</S.Chip>
+          </div>
+        </div>
+      </div>
+      <div>
+        <Label style={{ marginBottom: 16 }}>Pipeline</Label>
+        <PipelineSteps S={S} steps={c.steps || []} />
+      </div>
+      {failed && <div><Link className="crumb" href={`/register?id=${c.id}`}>Try again</Link></div>}
+    </>
+  );
+}
+
 export default function ContractPublic({ id, demo }) {
   const S = useSonataUI();
   const router = useRouter();
   const { data, error, loading, refetch } = useApi(() => contracts.get(id), [id]);
   if (!S) return null;
   const live = data && data.status === 'ready' ? data : null;
+  const registering = data && data.status !== 'ready' ? data : null;   // registered, still queued/running/failed
   const notFound = error && error.status === 404;
+  const crumb = data ? (data.name || shortId(id)) : notFound && demo ? demo.name : shortId(id);
   return (
     <main className="page">
-      <div className="sn-label sn-muted"><Link className="crumb" href="/explorer">Explorer</Link> / {live ? (live.name || shortId(id)) : demo ? demo.name : shortId(id)}</div>
+      <div className="sn-label sn-muted"><Link className="crumb" href="/explorer">Explorer</Link> / {crumb}</div>
       {live ? <Live S={S} c={live} router={router} />
+        : registering ? <Registering S={S} c={registering} />
         : notFound && demo ? <Demo S={S} c={demo} router={router} />
-        : notFound ? (
-          <div style={{ borderTop: '1px solid var(--sn-ink)', padding: '24px 0' }}>
-            <div className="sn-body" style={{ fontWeight: 700 }}>This contract isn't registered with Sonata.</div>
-            <div style={{ marginTop: 16 }}><S.Button arrow onClick={() => router.push(`/register?id=${id}`)}>Register it</S.Button></div>
-          </div>
-        ) : <Async S={S} loading={loading} error={error} onRetry={refetch}>{data && <Demo S={S} c={demo || { id, name: shortId(id), d: 'Registration in progress.', net: 'Testnet', fns: 0, tools: 0, calls: 0, category: '—' }} router={router} />}</Async>}
+        : notFound ? <NotRegistered S={S} id={id} />
+        : <Async S={S} loading={loading} error={error} onRetry={refetch} />}
     </main>
   );
 }
