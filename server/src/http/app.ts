@@ -15,7 +15,9 @@ import { registerMcp } from '../mcp/route.js';
 export function buildApp(deps: Deps, opts: { rateLimitMax?: number } = {}) {
   // trustProxy: behind Fly's proxy req.ip — and so the rate-limit key — must be the client, not the edge (review finding I3).
   const app = Fastify({ trustProxy: true, loggerInstance: deps.log, genReqId: () => crypto.randomUUID(), bodyLimit: 1_000_000 });
-  app.register(cors, { origin: (origin, cb) => cb(null, !origin || deps.cfg.corsOrigins.includes(origin) || deps.cfg.corsOrigins.includes('*')), methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['content-type', 'authorization'] });
+  // mcp-protocol-version / mcp-session-id: the Streamable HTTP transport sends/reads these on cross-origin
+  // MCP clients (review finding) — allowedHeaders so the client may send them, exposedHeaders so it may read them back.
+  app.register(cors, { origin: (origin, cb) => cb(null, !origin || deps.cfg.corsOrigins.includes(origin) || deps.cfg.corsOrigins.includes('*')), methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['content-type', 'authorization', 'mcp-protocol-version', 'mcp-session-id'], exposedHeaders: ['mcp-session-id'] });
   app.register(rateLimit, { max: opts.rateLimitMax ?? 120, timeWindow: '1 minute' });
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof ApiError) return reply.code(err.status).send(err.toJSON());

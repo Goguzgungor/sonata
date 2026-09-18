@@ -5,6 +5,8 @@ import type { Deps } from '../http/deps.js';
 import { buildMcpServer } from './tools.js';
 import { buildGlobalMcpServer } from './global.js';
 
+const MCP_RATE_LIMIT = { max: 600, timeWindow: '1 minute' };
+
 /** Connects a fresh, stateless Streamable HTTP transport to `server` and hands the raw request/response to it. */
 async function serve(server: McpServer, req: FastifyRequest, reply: FastifyReply) {
   const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });
@@ -27,7 +29,7 @@ export function registerMcp(app: FastifyInstance<any, any, any, any, any>, deps:
   app.route<{ Params: { id: string } }>({
     method: ['GET', 'POST', 'DELETE'],
     url: '/c/:id/mcp',
-    config: { rateLimit: { max: 600, timeWindow: '1 minute' } },
+    config: { rateLimit: MCP_RATE_LIMIT },
     handler: async (req, reply) => {
       const { row, model, spec } = await deps.registry.ready(req.params.id);   // ApiError → JSON envelope via the app error handler
       const server = buildMcpServer(model, spec, row.mcpScope, deps);
@@ -37,7 +39,7 @@ export function registerMcp(app: FastifyInstance<any, any, any, any, any>, deps:
   app.route({
     method: ['GET', 'POST', 'DELETE'],
     url: '/mcp',
-    config: { rateLimit: { max: 600, timeWindow: '1 minute' } },
+    config: { rateLimit: MCP_RATE_LIMIT },
     handler: async (req, reply) => {
       const server = buildGlobalMcpServer(deps);
       await serve(server, req, reply);
