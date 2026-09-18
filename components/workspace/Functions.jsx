@@ -1,9 +1,12 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { download } from '@/lib/sonata';
-import { contracts, isAccountId } from '@/lib/api';
+import * as wallet from '@/lib/wallet';
+import { contracts, isAccountId, PASSPHRASES } from '@/lib/api';
+import { useSession } from '@/components/SessionProvider';
 import { inputsOf, fieldKind, placeholderFor, coerceArgs } from '@/lib/args';
 import { Label, CodeBox, CopyButton, ResponsiveTable } from '@/components/ui';
+import { expertUrl } from '@/lib/expert';
 
 const COLS = [
   { key: 'num', header: '', width: '56px' },
@@ -13,9 +16,10 @@ const COLS = [
 ];
 const MODES = [{ value: 'sim', label: 'Simulate' }, { value: 'build', label: 'Build transaction' }];
 const sig = (f) => `${f.name}(${f.inputs.map((i) => `${i.name}: ${i.type}`).join(', ')}) → ${f.output}`;
-const kindChip = (S, k) => k === 'write' ? <S.Chip tone="inverse">Write</S.Chip> : k === 'read' ? <S.Chip tone="neutral">Read</S.Chip> : <S.Chip tone="neutral">—</S.Chip>;
+const kindChip = (S, k) => k === 'write' ? <S.Chip tone="inverse">Write</S.Chip> : k === 'read' ? <S.Chip tone="neutral">Read</S.Chip> : <S.Chip tone="neutral">Unknown</S.Chip>;
 
 export default function Functions({ S, contract: c, id }) {
+  const { address } = useSession();
   const functions = c?.functions || [];
   const [sel, setSel] = useState(functions[0]?.name || null);
   const fn = functions.find((f) => f.name === sel) || null;
@@ -25,15 +29,17 @@ export default function Functions({ S, contract: c, id }) {
   const [mode, setMode] = useState('sim');
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState({});
-  const [out, setOut] = useState(null);         // { kind: 'sim'|'build'|'error', body }
-  const pick = (name) => { setSel(name); setValues({}); setErrors({}); setOut(null); };
-  useEffect(() => { setSel(c?.functions?.[0]?.name || null); setValues({}); setErrors({}); setOut(null); setSource(''); }, [c?.id]);
+  const [out, setOut] = useState(null);         // { kind: 'sim'|'build'|'submitted'|'error', body }
+  const [signErr, setSignErr] = useState(null); // wallet rejection note, kept separate so a failed signature doesn't discard the built XDR in `out`
+  const pick = (name) => { setSel(name); setValues({}); setErrors({}); setOut(null); setSignErr(null); };
+  useEffect(() => { setSel(c?.functions?.[0]?.name || null); setValues({}); setErrors({}); setOut(null); setSignErr(null); setSource(''); }, [c?.id]);
+  useEffect(() => { if (mode === 'build' && address && !source) setSource(address); }, [mode, address]);
 
   const run = async () => {
     const { args, errors: e } = coerceArgs(inputs, values);
     if (mode === 'build' && !isAccountId(source.trim())) e.source = 'A G… account address is required to build a transaction';
     if (mode === 'sim' && source.trim() && !isAccountId(source.trim())) e.source = 'Must be a G… account address';
-    setErrors(e); setOut(null);
+    setErrors(e); setOut(null); setSignErr(null);
     if (Object.keys(e).length) return;
     setBusy(true);
     try {
@@ -43,6 +49,25 @@ export default function Functions({ S, contract: c, id }) {
       // details.path can point inside a value ("orders[0].qty"); the form is keyed by the top-level argument name.
       if (err.error === 'invalid_args' && err.details?.path) setErrors({ [String(err.details.path).split(/[.[]/)[0]]: err.message });
       setOut({ kind: 'error', body: err });
+    } finally { setBusy(false); }
+  };
+
+  const signAndSubmit = async () => {
+    const { args, errors: e } = coerceArgs(inputs, values);
+    if (!isAccountId(source.trim())) e.source = 'A G… account address is required to build a transaction';
+    setErrors(e); setOut(null); setSignErr(null);
+    if (Object.keys(e).length) return;
+    setBusy(true);
+    try {
+      const built = await contracts.tx(id, fn.name, args, source.trim());
+      setOut({ kind: 'build', body: built });
+      const signed = await wallet.signTransaction(built.xdr, PASSPHRASES[c.network], source.trim());
+      setOut({ kind: 'submitted', body: { ...(await contracts.submit(id, signed)), xdr: built.xdr } });
+    } catch (err) {
+      // A rejected/failed wallet signature must not discard the built XDR already shown in `out` — surface it
+      // as a note instead of replacing the Unsigned XDR panel with an error panel.
+      if (err?.name === 'WalletError') setSignErr(err.code === 'network' ? `Switch your wallet to ${c.network} and try again.` : err.message);
+      else { if (err.error === 'invalid_args' && err.details?.path) setErrors({ [String(err.details.path).split(/[.[]/)[0]]: err.message }); setOut({ kind: 'error', body: err }); }
     } finally { setBusy(false); }
   };
 
@@ -60,7 +85,7 @@ export default function Functions({ S, contract: c, id }) {
       {fn && (
         <div className="two-col" style={{ marginTop: 24 }}>
           <div>
-            <div className="sn-label sn-muted">Function detail · {fn.kind === 'unknown' ? 'unclassified' : fn.kind}</div>
+            <div className="sn-label sn-muted">Function detail · {fn.kind === 'unknown' ? 'unknown (classified on first simulation)' : fn.kind}</div>
             <h2 className="sn-h2" style={{ margin: '14px 0 0' }}>{fn.name}</h2>
             {fn.doc && <p className="sn-body sn-muted" style={{ marginTop: 8 }}>{fn.doc}</p>}
             <div className="sn-mono" style={{ marginTop: 10, overflowWrap: 'anywhere' }}>POST {contracts.urls(id).base}/{mode === 'sim' ? 'call' : 'tx'}/{fn.name}</div>
@@ -95,9 +120,11 @@ export default function Functions({ S, contract: c, id }) {
                 placeholder="G…" value={source} onChange={(e) => setSource(e.target.value)} />
             </div>
             <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-              <S.Segmented ariaLabel="Mode" options={MODES} value={mode} onChange={(v) => { setMode(v); setOut(null); setErrors({}); }} />
+              <S.Segmented ariaLabel="Mode" options={MODES} value={mode} onChange={(v) => { setMode(v); setOut(null); setErrors({}); setSignErr(null); }} />
               <S.Button disabled={busy} onClick={run}>{busy ? 'Working…' : mode === 'sim' ? 'Simulate' : 'Build unsigned XDR'}</S.Button>
+              {mode === 'build' && address && <S.Button variant="secondary" disabled={busy} onClick={signAndSubmit}>Sign &amp; submit</S.Button>}
             </div>
+            {signErr && <div className="sn-small" style={{ color: 'var(--sn-bad, #b00)', marginTop: 12 }}>{signErr}</div>}
           </div>
           <div>
             {out?.kind === 'sim' && (
@@ -132,7 +159,20 @@ export default function Functions({ S, contract: c, id }) {
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   <S.Button variant="secondary" onClick={() => download(`${fn.name}-unsigned.xdr`, out.body.xdr)}>Download XDR</S.Button>
                 </div>
-                <div className="sn-small sn-muted" style={{ marginTop: 12 }}>Sign it with Freighter or any Stellar signer and submit with <span className="sn-mono">POST {contracts.urls(id).base}/submit</span>. In-app signing is coming.</div>
+                <div className="sn-small sn-muted" style={{ marginTop: 12 }}>Sign it here with your connected wallet, or with any Stellar signer and <span className="sn-mono">POST {contracts.urls(id).base}/submit</span>.</div>
+              </>
+            )}
+            {out?.kind === 'submitted' && (
+              <>
+                <Label>Submitted</Label>
+                <div style={{ marginTop: 14 }}>
+                  <S.KeyValueList rows={[
+                    { key: 'Status', value: out.body.status, mono: false },
+                    { key: 'Hash', value: <a className="crumb" href={expertUrl(c.network, 'tx', out.body.hash)} target="_blank" rel="noreferrer">{out.body.hash}</a> },
+                    { key: 'Ledger', value: out.body.ledger !== undefined ? String(out.body.ledger) : '—' },
+                    ...(out.body.fee_charged ? [{ key: 'Fee charged', value: `${out.body.fee_charged} stroops` }] : [])
+                  ]} />
+                </div>
               </>
             )}
             {out?.kind === 'error' && (

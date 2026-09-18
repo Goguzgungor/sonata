@@ -9,6 +9,7 @@ export type Config = {
   simSourceAccount: string;
   corsOrigins: string[];
   logLevel: string;
+  authHomeDomain: string;
 };
 
 export const PASSPHRASES: Record<Network, string> = {
@@ -29,6 +30,9 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     networks,
     simSourceAccount: env.SIM_SOURCE_ACCOUNT || 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
     corsOrigins: (env.CORS_ORIGINS || 'http://localhost:3000').split(',').map((s) => s.trim()).filter(Boolean),
-    logLevel: env.LOG_LEVEL || 'info'
+    logLevel: env.LOG_LEVEL || 'info',
+    authHomeDomain: env.AUTH_HOME_DOMAIN || hostOf((env.CORS_ORIGINS || 'http://localhost:3000').split(',')[0].trim())
   };
 }
+
+const hostOf = (url: string) => { try { return new URL(url).host; } catch { return 'localhost'; } };

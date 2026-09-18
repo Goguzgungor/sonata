@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { Label } from '@/components/ui';
 import { relTime, mcpToolCount } from '@/lib/api';
+import { expertUrl } from '@/lib/expert';
 
 export default function Overview({ S, contract: c, id }) {
   if (!c) return null;
@@ -11,7 +12,7 @@ export default function Overview({ S, contract: c, id }) {
     { name: 'REST API', d: `${fns} functions · /call · /tx`, href: `/c/${id}/functions` },
     { name: 'MCP server', d: `${mcpToolCount(c)} tools · ${rw ? 'read + write' : 'read-only by default'}`, href: `/c/${id}/mcp` },
     { name: 'Docs', d: 'llms.txt · OpenAPI 3.1', href: `/c/${id}/docs` },
-    { name: 'History', d: 'preview · indexing arrives in a later release', href: `/c/${id}/history`, preview: true }
+    { name: 'History', d: 'coming soon · decoded events and calls', href: `/c/${id}/history`, soon: true }
   ];
   return (
     <>
@@ -30,7 +31,7 @@ export default function Overview({ S, contract: c, id }) {
                 style={{ display: 'grid', gridTemplateColumns: '48px minmax(0, 1fr) 24px', gap: '0 16px', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid var(--sn-hairline)' }}>
                 <S.Numeral index={i + 1} />
                 <div>
-                  <div className="sn-body" style={{ fontWeight: 700 }}>{s.name}{s.preview && <> <S.Chip tone="neutral">preview</S.Chip></>}</div>
+                  <div className="sn-body" style={{ fontWeight: 700 }}>{s.name}{s.soon && <> <S.Chip tone="neutral">soon</S.Chip></>}</div>
                   <div className="sn-mono" style={{ color: 'var(--sn-ink-2)', marginTop: 3 }}>{s.d}</div>
                 </div>
                 <div className="sn-mono" style={{ fontSize: 16 }}>→</div>
@@ -43,8 +44,9 @@ export default function Overview({ S, contract: c, id }) {
           <div style={{ marginTop: 16 }}>
             <S.KeyValueList rows={[
               { key: 'Network', value: c.network, mono: false },
-              { key: 'Contract ID', value: c.id },
-              { key: 'WASM hash', value: c.wasmHash.slice(0, 12) + '…' },
+              { key: 'Type', value: c.sac ? 'Stellar Asset Contract (SEP-41 token)' : 'Soroban WASM contract', mono: false },
+              { key: 'Contract ID', value: <a className="crumb" href={expertUrl(c.network, 'contract', c.id)} target="_blank" rel="noreferrer">{c.id}</a> },
+              { key: 'WASM hash', value: c.sac ? 'built-in spec' : c.wasmHash.slice(0, 12) + '…' },
               { key: 'Registered', value: relTime(c.created_at), mono: false },
               { key: 'Status', value: c.status, mono: false },
               { key: 'MCP scope', value: rw ? 'read + write' : 'read-only', mono: false },

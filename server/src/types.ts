@@ -17,6 +17,7 @@ export type ContractModel = {
   name: string | null;
   wasmHash: string;
   specLedger: number;
+  sac?: boolean;
   functions: FnModel[];
   types: Array<{ name: string; kind: 'struct' | 'union' | 'enum'; doc: string; jsonSchema: JsonSchema }>;
   errors: Array<{ code: number; name: string; doc: string }>;

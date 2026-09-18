@@ -2,15 +2,14 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSonataUI } from '@/lib/sonata';
-import { contracts, shortId, relTime, mcpToolCount } from '@/lib/api';
+import { contracts, shortId, shortAddr, relTime, mcpToolCount } from '@/lib/api';
 import { useApi } from '@/lib/useApi';
 import Async from '@/components/Async';
 import NotRegistered from '@/components/NotRegistered';
-import PreviewBar from '@/components/PreviewBar';
 import { Label, CodeBox, CopyButton, ResponsiveTable } from '@/components/ui';
+import { expertUrl } from '@/lib/expert';
 import { mcpConfig } from '@/components/workspace/Mcp';
 import { PipelineSteps, STATUS } from '@/components/workspace/Workspace';
-import { PUBLIC_FNS, fmt } from '@/components/explorer-data';
 
 const FN_COLS = [
   { key: 'num', header: '', width: '56px' }, { key: 'fn', header: 'Function', width: '150px', strong: true },
@@ -20,7 +19,7 @@ const sig = (f) => `${f.name}(${f.inputs.map((i) => `${i.name}: ${i.type}`).join
 
 function Live({ S, c, router }) {
   const config = mcpConfig(c);
-  const rows = c.functions.map((f, i) => ({ num: <S.Numeral index={i + 1} />, fn: f.name, sig: sig(f), kind: <S.Chip tone={f.kind === 'write' ? 'inverse' : 'neutral'}>{f.kind === 'write' ? 'Write' : f.kind === 'read' ? 'Read' : '—'}</S.Chip> }));
+  const rows = c.functions.map((f, i) => ({ num: <S.Numeral index={i + 1} />, fn: f.name, sig: sig(f), kind: <S.Chip tone={f.kind === 'write' ? 'inverse' : 'neutral'}>{f.kind === 'write' ? 'Write' : f.kind === 'read' ? 'Read' : 'Unknown'}</S.Chip> }));
   const name = c.name || shortId(c.id);
   return (
     <>
@@ -30,6 +29,7 @@ function Live({ S, c, router }) {
           <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <span className="sn-mono" style={{ overflowWrap: 'anywhere' }}>{c.id}</span>
             <CopyButton S={S} text={c.id}>Copy</CopyButton>
+            <a className="crumb" href={expertUrl(c.network, 'contract', c.id)} target="_blank" rel="noreferrer">Stellar Expert ↗</a>
             <S.Chip tone={c.network === 'mainnet' ? 'inverse' : 'neutral'}>{c.network === 'mainnet' ? 'Mainnet' : 'Testnet'}</S.Chip>
           </div>
         </div>
@@ -48,7 +48,9 @@ function Live({ S, c, router }) {
         <div>
           <Label style={{ marginBottom: 16 }}>About</Label>
           <S.KeyValueList rows={[
-            { key: 'Network', value: c.network, mono: false }, { key: 'Spec', value: 'SEP-48' },
+            { key: 'Network', value: c.network, mono: false },
+            { key: 'Owner', value: c.owner ? <a className="crumb" href={expertUrl(c.network, 'account', c.owner)} target="_blank" rel="noreferrer">{shortAddr(c.owner)}</a> : 'unclaimed', mono: !!c.owner },
+            { key: 'Spec', value: 'SEP-48' },
             { key: 'AI docs', value: <a className="crumb" href={c.urls.llms} target="_blank" rel="noreferrer">llms.txt</a> },
             { key: 'OpenAPI', value: <a className="crumb" href={c.urls.openapi} target="_blank" rel="noreferrer">openapi.json</a> },
             { key: 'Base URL', value: contracts.urls(c.id).base }   // the API's `urls` has no `base`
@@ -66,33 +68,6 @@ function Live({ S, c, router }) {
         <Label style={{ marginBottom: 16 }}>Functions · {c.functions.length}</Label>
         <ResponsiveTable S={S} columns={FN_COLS} rows={rows} minWidth={760} />
       </div>
-    </>
-  );
-}
-
-function Demo({ S, c, router }) {   // the previous demo rendering, unchanged in substance
-  const base = `${contracts.urls(c.id).base}`;
-  const rows = PUBLIC_FNS.slice(0, c.fns).map((f, i) => ({ num: <S.Numeral index={i + 1} />, fn: f[0], sig: f[1], kind: <S.Chip tone={f[2] ? 'inverse' : 'neutral'}>{f[2] ? 'Write' : 'Read'}</S.Chip> }));
-  return (
-    <>
-      <PreviewBar />
-      <div className="page-head" style={{ gap: 24 }}>
-        <div style={{ minWidth: 0, maxWidth: '100%' }}>
-          <h1 className="sn-h1">{c.name}</h1>
-          <p className="sn-body sn-muted" style={{ marginTop: 10, maxWidth: 560 }}>{c.d}</p>
-          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <span className="sn-mono" style={{ overflowWrap: 'anywhere' }}>{c.id}</span>
-            <S.Chip tone={c.net === 'Mainnet' ? 'inverse' : 'neutral'}>{c.net}</S.Chip>
-            {c.verified && <S.Chip tone="good">Verified</S.Chip>}
-          </div>
-        </div>
-        <div className="actions"><S.Button variant="secondary" onClick={() => router.push(`/register?id=${c.id}`)}>Register to your workspace</S.Button></div>
-      </div>
-      <div className="sn-stat-row">
-        <S.Stat label="Calls · 30d" value={fmt(c.calls)} /><S.Stat label="Functions" value={String(c.fns)} /><S.Stat label="MCP tools" value={String(c.tools)} /><S.Stat label="Category" value={c.category} />
-      </div>
-      <div><Label style={{ marginBottom: 16 }}>Functions · {c.fns}</Label><ResponsiveTable S={S} columns={FN_COLS} rows={rows} minWidth={760} /></div>
-      <div className="sn-small sn-muted">Base URL {base} · sample listing; register the contract to get its real API.</div>
     </>
   );
 }
@@ -126,7 +101,7 @@ function Registering({ S, c }) {
   );
 }
 
-export default function ContractPublic({ id, demo }) {
+export default function ContractPublic({ id }) {
   const S = useSonataUI();
   const router = useRouter();
   const { data, error, loading, refetch } = useApi(() => contracts.get(id), [id]);
@@ -134,15 +109,16 @@ export default function ContractPublic({ id, demo }) {
   const live = data && data.status === 'ready' ? data : null;
   const registering = data && data.status !== 'ready' ? data : null;   // registered, still queued/running/failed
   const notFound = error && error.status === 404;
-  const crumb = data ? (data.name || shortId(id)) : notFound && demo ? demo.name : shortId(id);
+  const crumb = data ? (data.name || shortId(id)) : shortId(id);
   return (
     <main className="page">
       <div className="sn-label sn-muted"><Link className="crumb" href="/explorer">Explorer</Link> / {crumb}</div>
-      {live ? <Live S={S} c={live} router={router} />
-        : registering ? <Registering S={S} c={registering} />
-        : notFound && demo ? <Demo S={S} c={demo} router={router} />
-        : notFound ? <NotRegistered S={S} id={id} />
-        : <Async S={S} loading={loading} error={error} onRetry={refetch} />}
+      <Async S={S} loading={loading} error={notFound ? null : error} onRetry={refetch}>
+        {live ? <Live S={S} c={live} router={router} />
+          : registering ? <Registering S={S} c={registering} />
+          : notFound ? <NotRegistered S={S} id={id} />
+          : null}
+      </Async>
     </main>
   );
 }

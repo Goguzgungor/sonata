@@ -4,6 +4,8 @@ import { Registry } from '../../src/registry/registry.js';
 import { FakeChain } from '../helpers/fakeChain.js';
 import { StrKey } from '@stellar/stellar-sdk';
 import { FIXTURE_ID, loadFixtureWasm } from '../fixtures/index.js';
+import { sacContract } from '../../src/chain/errors.js';
+import { SAC_WASM_HASH } from '../../src/spec/sacSpec.js';
 
 // Both generators read the *name*, so a regenerate-on-rename is observable in the stored documents.
 const gen = { llmsTxt: (m: any) => `# ${m.name ?? m.id}`, openapi: (m: any) => ({ openapi: '3.1.0', title: m.name ?? m.id }) };
@@ -72,6 +74,20 @@ describe('Registry.register', () => {
     expect(row.llmsTxt).toBe('# New');
     expect((row.openapi as any).title).toBe('New');
     expect((await reg.ready(FIXTURE_ID)).model.name).toBe('New');   // and the cache is not serving the old model
+  });
+  it('registers a Stellar Asset Contract from the built-in SEP-41 spec', async () => {
+    chain.impl.getContractWasm = async () => { throw sacContract(FIXTURE_ID); };
+    await reg.register(FIXTURE_ID, 'testnet', 'XLM', 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF');
+    await reg.whenIdle();
+    const row = (await store.get(FIXTURE_ID))!;
+    expect(row.status).toBe('ready');
+    expect(row.steps[0]).toMatchObject({ name: 'fetch', status: 'done', detail: expect.stringContaining('Stellar Asset Contract') });
+    expect(row.wasmHash).toBe(SAC_WASM_HASH);
+    expect(row.model).toMatchObject({ sac: true });
+    const names = row.model!.functions.map((f) => f.name);
+    for (const n of ['balance', 'transfer', 'approve', 'allowance', 'decimals', 'name', 'symbol', 'mint', 'burn']) expect(names).toContain(n);
+    await reg.register(FIXTURE_ID, 'testnet', null, 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF'); await reg.whenIdle();
+    expect((await store.get(FIXTURE_ID))!.steps[1].detail).toBe('unchanged');   // same stand-in hash → short-circuit
   });
 });
 

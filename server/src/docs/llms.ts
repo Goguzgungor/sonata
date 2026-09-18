@@ -54,8 +54,9 @@ export function llmsTxt(m: ContractModel, cfg: { publicBaseUrl: string }): strin
   const title = m.name ?? shortId(m.id);
   const lines: string[] = [
     `# ${title}`, '',
-    `Soroban contract · ${m.functions.length} functions · SEP-48 · ${m.network}`,
-    `Contract ID: ${m.id}`, '',
+    `${m.sac ? 'Stellar Asset Contract (SEP-41 token)' : 'Soroban contract'} · ${m.functions.length} functions · SEP-48 · ${m.network}`,
+    `Contract ID: ${m.id}`,
+    `Explorer: https://stellar.expert/explorer/${m.network === 'mainnet' ? 'public' : 'testnet'}/contract/${m.id}`, '',
     '## Endpoints', '',
     `Base: ${base}`,
     `POST ${base}/call/{fn}   simulate any function → { result, simulated: true, auth }`,
