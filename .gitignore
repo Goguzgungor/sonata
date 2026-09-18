@@ -3,3 +3,7 @@ node_modules
 out
 .vercel
 .DS_Store
+test-results/
+playwright-report/
+.claude/worktrees/
+.playwright-mcp/

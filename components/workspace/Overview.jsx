@@ -1,30 +1,36 @@
 'use client';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Label, evRow, ResponsiveTable } from '@/components/ui';
-import { EV, EV_COLS, SURFACES, BAR_VALS } from '@/components/data';
+import { Label } from '@/components/ui';
+import { relTime, mcpToolCount } from '@/lib/api';
 
-export default function Overview({ S }) {
-  const router = useRouter();
-  const max = Math.max(...BAR_VALS);
+export default function Overview({ S, contract: c, id }) {
+  if (!c) return null;
+  const fns = c.functions.length;
+  const rw = c.mcp_scope === 'rw';
+  const surfaces = [
+    { name: 'REST API', d: `${fns} functions · /call · /tx`, href: `/c/${id}/functions` },
+    { name: 'MCP server', d: `${mcpToolCount(c)} tools · ${rw ? 'read + write' : 'read-only by default'}`, href: `/c/${id}/mcp` },
+    { name: 'Docs', d: 'llms.txt · OpenAPI 3.1', href: `/c/${id}/docs` },
+    { name: 'History', d: 'preview · indexing arrives in a later release', href: `/c/${id}/history`, preview: true }
+  ];
   return (
     <>
       <div className="sn-stat-row">
-        <S.Stat label="Requests · 24h" value="1,284" note="+18.4% vs yesterday" />
-        <S.Stat label="Events indexed" value="4,920" note="since ledger 47,610,002" />
-        <S.Stat label="Active addresses · 24h" value="18" note="3 new" />
-        <S.Stat label="Volume · 24h" value="42,910" unit="XLM" note="≈ 24,850 USDC" />
+        <S.Stat label="Functions" value={String(fns)} />
+        <S.Stat label="Types" value={String(c.types.length)} />
+        <S.Stat label="Errors" value={String(c.errors.length)} />
+        <S.Stat label="Events" value={String(c.events.length)} />
       </div>
       <div className="two-col" style={{ marginTop: 12 }}>
         <div>
           <Label>Generated surfaces</Label>
           <div style={{ marginTop: 16, borderTop: '1px solid var(--sn-ink)' }}>
-            {SURFACES.map((s, i) => (
-              <Link key={i} className="row-link" href={s.href}
+            {surfaces.map((s, i) => (
+              <Link key={s.name} className="row-link" href={s.href}
                 style={{ display: 'grid', gridTemplateColumns: '48px minmax(0, 1fr) 24px', gap: '0 16px', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid var(--sn-hairline)' }}>
                 <S.Numeral index={i + 1} />
                 <div>
-                  <div className="sn-body" style={{ fontWeight: 700 }}>{s.name}</div>
+                  <div className="sn-body" style={{ fontWeight: 700 }}>{s.name}{s.preview && <> <S.Chip tone="neutral">preview</S.Chip></>}</div>
                   <div className="sn-mono" style={{ color: 'var(--sn-ink-2)', marginTop: 3 }}>{s.d}</div>
                 </div>
                 <div className="sn-mono" style={{ fontSize: 16 }}>→</div>
@@ -33,26 +39,18 @@ export default function Overview({ S }) {
           </div>
         </div>
         <div>
-          <Label>Transactions per day · last 14 days</Label>
+          <Label>Contract</Label>
           <div style={{ marginTop: 16 }}>
-            <div className="sn-label" style={{ textAlign: 'right', marginBottom: 8 }}>today · 58</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 180, borderBottom: '1px solid var(--sn-ink)' }}>
-              {BAR_VALS.map((v, i) => (
-                <div key={i} style={{ flex: 1, height: Math.round(v / max * 170), background: i === BAR_VALS.length - 1 ? 'var(--sn-accent)' : 'var(--sn-ink)' }} />
-              ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-              <span className="sn-label sn-muted">Aug 27</span>
-              <span className="sn-label sn-muted">Sep 9</span>
-            </div>
+            <S.KeyValueList rows={[
+              { key: 'Network', value: c.network, mono: false },
+              { key: 'Contract ID', value: c.id },
+              { key: 'WASM hash', value: c.wasmHash.slice(0, 12) + '…' },
+              { key: 'Registered', value: relTime(c.created_at), mono: false },
+              { key: 'Status', value: c.status, mono: false },
+              { key: 'MCP scope', value: rw ? 'read + write' : 'read-only', mono: false },
+              { key: 'OpenAPI', value: <a className="crumb" href={c.urls.openapi} target="_blank" rel="noreferrer">openapi.json</a> }
+            ]} />
           </div>
-        </div>
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <Label style={{ marginBottom: 16 }}>Latest events</Label>
-        <ResponsiveTable S={S} columns={EV_COLS} rows={EV.slice(0, 3).map(evRow(S))} minWidth={800} />
-        <div style={{ marginTop: 12 }}>
-          <S.Button variant="text" onClick={() => router.push('/c/history')}>Open history</S.Button>
         </div>
       </div>
     </>

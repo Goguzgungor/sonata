@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSonataUI } from '@/lib/sonata';
 import { Label } from '@/components/ui';
+import PreviewBar from '@/components/PreviewBar';
 import { PUBLIC_CONTRACTS, CATEGORIES, EXPLORER_SORTS, shortId, fmt } from '@/components/explorer-data';
 
 export default function Explorer() {
@@ -20,6 +21,7 @@ export default function Explorer() {
     .sort((a, b) => sort === 'active' ? b.calls - a.calls : sort === 'newest' ? b.added.localeCompare(a.added) : b.updated.localeCompare(a.updated));
   return (
     <main className="page" style={{ gap: 32 }}>
+      <PreviewBar />
       <div className="page-head">
         <div style={{ minWidth: 0 }}>
           <h1 className="sn-h1">Contract explorer</h1>

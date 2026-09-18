@@ -1,0 +1,20 @@
+name: site
+# Unit tests (vitest) + a production build. The Playwright flow in e2e/ is a
+# deliberate omission: it needs Postgres, a running API and a real testnet
+# fixture, so it stays a local/manual check (see e2e/README.md).
+# The two paths filters must stay identical (GitHub Actions has no YAML anchors).
+on:
+  push: { paths: ['app/**', 'components/**', 'lib/**', 'test/site/**', 'package.json', 'package-lock.json', 'vitest.config.mjs', '.github/workflows/site.yml'] }
+  pull_request: { paths: ['app/**', 'components/**', 'lib/**', 'test/site/**', 'package.json', 'package-lock.json', 'vitest.config.mjs', '.github/workflows/site.yml'] }
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: package-lock.json }
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env: { NEXT_PUBLIC_API_URL: https://api.sonata.brages.uk }

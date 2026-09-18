@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { download } from '@/lib/sonata';
 import { Label, evRow, ResponsiveTable } from '@/components/ui';
+import PreviewBar from '@/components/PreviewBar';
 import { EV, EV_COLS, ADDR_EV, ADDR_COLS, HIST_OPTS } from '@/components/data';
 
 export default function History({ S }) {
@@ -17,6 +18,7 @@ export default function History({ S }) {
     ({ time: e[0], event: e[1], call: e[2], ledger: e[3], status: e[4] ? 'success' : 'reverted' })), null, 2);
   return (
     <>
+      <PreviewBar />
       <div className="filters">
         <div className="filters__seg">
           <S.Segmented ariaLabel="Event type" options={HIST_OPTS} value={type} onChange={(v) => { setType(v); setShowAll(false); }} />

@@ -1,4 +1,4 @@
-import { API_URL } from './data';
+import { DEMO_API_URL } from './data';
 
 /* Published Sonata flows: minimal-input, spec-driven transaction builders (sample data). */
 export const FLOWS = [
@@ -48,7 +48,7 @@ export const INTENTS = ['all', ...new Set(FLOWS.map((f) => f.intent))].sort((a, 
 export const PROTOCOLS = ['all', ...new Set(FLOWS.map((f) => f.protocol))].sort((a, b) => (a === 'all' ? -1 : b === 'all' ? 1 : a.localeCompare(b)));
 
 export const flowRequest = (f) => JSON.stringify({ inputs: Object.fromEntries(f.inputs.map(([k, t]) => [k, t === 'Address' ? 'G…' : t === 'bool' ? true : t === 'string' ? '…' : '0'])), network: 'testnet' }, null, 2);
-export const flowCurl = (f) => `curl -X POST "${API_URL}/flows/${f.slug}/build" \\
+export const flowCurl = (f) => `curl -X POST "${DEMO_API_URL}/flows/${f.slug}/build" \\
   -H "Content-Type: application/json" \\
   -d '${flowRequest(f).replace(/\n\s*/g, ' ')}'
 

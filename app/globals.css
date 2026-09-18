@@ -157,7 +157,6 @@ img, svg { max-width: 100%; }
   .brand { grid-area: brand; }
   .nav-right { grid-area: right; }
   .nav-links { grid-area: links; gap: 20px; margin: 0 calc(-1 * var(--pad)); padding: 14px var(--pad) 12px; }
-  .nav-wallet { display: none; }
 
   .page { padding-top: 28px; padding-bottom: 72px; gap: 24px; }
   .home-section { padding: 48px var(--pad); }

@@ -41,3 +41,31 @@ Either way the code shape is the same: an `ingest/` module with a `HistorySource
 - Obsrvr: https://docs.withobsrvr.com/docs/lake/overview/ · https://www.withobsrvr.com/pricing
 - SubQuery / OnFinality: https://subquery.network/doc/indexer/quickstart/quickstart_chains/stellar-soroban.html · https://documentation.onfinality.io/support/pricing
 - Stellar Expert Open API (no contract endpoints): https://stellar.expert/openapi
+
+## Decision constraint added 2026-09-18 (from the user)
+
+**No ingestion into our own database.** History is read on demand from the provider's API at request time; `GET /c/:id/events` and the MCP `get_events` tool are thin proxies over it (decoding XDR topics/data with our SEP-48 spec + codec, applying our JSON contract).
+
+This re-ranks the candidates:
+
+| Rank | Provider | Why |
+|---|---|---|
+| 1 | **Mercury** | Hosted REST `events/by-contract/{id}` with `from`/`to` ledger range, `topics`, tx-hash filters, offset + cursor pagination, mainnet + testnet. Exactly the proxy target. Open question for the trial: history depth on mainnet. |
+| 2 | **Obsrvr Lake** | REST `/silver/events` by contract or topic, full history in cold storage. Private beta / sales conversation; revisit if Mercury's depth disappoints. |
+| 3 | **Hubble (BigQuery)** | Only for batch exports and stats (CSV of a whole history, counts): per-query latency and cost make it unsuitable for interactive proxying. |
+| — | RPC `getEvents` | ~7-day window only; can complement Mercury for the freshest ledgers if its indexing lags. |
+| ✗ | Goldsky Mirror, SubQuery/OnFinality | Pipelines that land data in a database we would own — ruled out by the constraint. |
+
+**Proxy-design notes for M4:**
+- Filter mapping: `type=<event>` → Mercury `topics` filter on the first topic (event name symbol, XDR-base64 encoded by us); `from/to` (ledger or ISO date) → `from`/`to` ledger sequences (dates need a ledger lookup — `getLatestLedger` + ~5.5 s/ledger estimate, or Hubble for exact); `address=G…` has **no server-side filter** in Mercury — it works via `topics` only when the address is a topic (e.g. `transfer(from, to)`); otherwise the proxy must page through the range and filter after decoding, so cap the range/pages and document the limit.
+- Pagination: pass Mercury's cursor (`id`) through as our `cursor`; default `limit` 50, max 200.
+- Stats tiles (events count, active addresses, volume) are aggregates — either compute over a bounded recent range on request, or serve them from Hubble on a schedule; not from Mercury per request.
+- Rate limits / quotas per plan are not published; measure in the trial and put a per-contract request cache (seconds, in-process) in front of the proxy.
+
+## Zero-cost path until scale (2026-09-18)
+
+- **Testnet:** Mercury **Dev** tier (free) — full REST/RPC API + webhooks for testnet. Build the proxy against it now.
+- **Mainnet:** free hybrid, both on-demand (no own DB):
+  - last ~7 days → RPC `getEvents` on a free-tier mainnet RPC (Ankr / QuickNode / Validation Cloud; rate-limited → in-process seconds-level cache per contract+range);
+  - older → **Hubble BigQuery** `crypto_stellar.history_contract_events` (`topics_decoded`/`data_decoded`, clustered by `contract_id`, month-partitioned). Google's free tier covers 1 TB scanned/month; clustered per-contract queries scan MBs, so effectively free. Cost: 1–5 s latency, intraday freshness (hence RPC for the recent window), a free GCP project + service-account key on the server.
+- **When to start paying:** BigQuery latency unacceptable for MCP `get_events` on mainnet, or RPC free-tier limits hit → Mercury Builder ($79/mo). Only the `HistorySource` adapter changes.
