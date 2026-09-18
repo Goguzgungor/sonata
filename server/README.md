@@ -28,12 +28,14 @@ Base URL `PUBLIC_BASE_URL` (prod: `https://api.sonata.brages.uk`). JSON everywhe
 | `PATCH /c/:id` `{name?, mcp_scope?}` | Settings | `200 {…same as GET}` |
 | `POST /c/:id/call/:fn` `{args, source?, network?}` | Simulate any function | `200 {result, simulated: true, latency_ms, ledger, auth: string[]}` |
 | `POST /c/:id/tx/:fn` `{args, source, fee?, timeout_s?, network?}` | Unsigned XDR | `200 {xdr, fee, auth: string[], ledger, expires_at}` |
-| `POST /c/:id/submit` `{xdr}` | Relay signed tx, wait ≤ 30 s | `200 {hash, status: 'success'\|'failed'\|'pending', ledger?, fee_charged?, result?}` |
+| `POST /c/:id/submit` `{xdr}` | Relay signed tx, wait ≤ 30 s | `200 {hash, status: 'success'\|'failed'\|'pending', ledger?, fee_charged?, result_xdr?}` |
 | `GET /tx/:hash?network=` | Poll a submit | same shape |
 | `GET /c/:id/llms.txt` | AI docs | `text/markdown` |
 | `GET /c/:id/openapi.json` | Per-contract OpenAPI 3.1 | JSON |
 | `GET /c/:id/events` | History | `501 {error: 'not_indexed'}` |
-| `GET /healthz` | Liveness | `200 {db: ok, networks: {testnet: ok, mainnet: 'disabled'}}` |
+| `GET /healthz` | Liveness | `200 {db: 'ok', networks: {testnet: 'ok'}}` |
+
+`healthz`'s `networks` only lists configured networks (`ok`/`error` per network); an unconfigured network is omitted entirely, and the response is `503` when any listed network — or `db` — is not `ok`.
 
 ## MCP
 

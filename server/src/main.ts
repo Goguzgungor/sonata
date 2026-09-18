@@ -19,4 +19,11 @@ const registry = new Registry({ store, chain, gen: { llmsTxt: (m) => llmsTxt(m, 
 const app = buildApp({ cfg, chain, registry, store, log });
 await app.listen({ port: cfg.port, host: '0.0.0.0' });
 log.info({ port: cfg.port, networks: Object.keys(cfg.networks), base: cfg.publicBaseUrl }, 'sonata server up');
-for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, async () => { await app.close(); await pool.end(); process.exit(0); });
+let closing = false;
+for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, async () => {
+  if (closing) return;
+  closing = true;
+  await app.close();
+  await pool.end();
+  process.exit(0);
+});
