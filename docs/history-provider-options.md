@@ -61,3 +61,11 @@ This re-ranks the candidates:
 - Pagination: pass Mercury's cursor (`id`) through as our `cursor`; default `limit` 50, max 200.
 - Stats tiles (events count, active addresses, volume) are aggregates — either compute over a bounded recent range on request, or serve them from Hubble on a schedule; not from Mercury per request.
 - Rate limits / quotas per plan are not published; measure in the trial and put a per-contract request cache (seconds, in-process) in front of the proxy.
+
+## Zero-cost path until scale (2026-09-18)
+
+- **Testnet:** Mercury **Dev** tier (free) — full REST/RPC API + webhooks for testnet. Build the proxy against it now.
+- **Mainnet:** free hybrid, both on-demand (no own DB):
+  - last ~7 days → RPC `getEvents` on a free-tier mainnet RPC (Ankr / QuickNode / Validation Cloud; rate-limited → in-process seconds-level cache per contract+range);
+  - older → **Hubble BigQuery** `crypto_stellar.history_contract_events` (`topics_decoded`/`data_decoded`, clustered by `contract_id`, month-partitioned). Google's free tier covers 1 TB scanned/month; clustered per-contract queries scan MBs, so effectively free. Cost: 1–5 s latency, intraday freshness (hence RPC for the recent window), a free GCP project + service-account key on the server.
+- **When to start paying:** BigQuery latency unacceptable for MCP `get_events` on mainnet, or RPC free-tier limits hit → Mercury Builder ($79/mo). Only the `HistorySource` adapter changes.
