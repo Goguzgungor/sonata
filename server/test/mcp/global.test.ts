@@ -29,7 +29,7 @@ describe('global MCP server', () => {
     expect(res.resources.map((r) => r.uri)).toContain(`sonata://c/${FIXTURE_ID}/llms.txt`);
   });
   it('list_contracts filters by network and query and hides pending rows by default', async () => {
-    const { client, registry } = await connect();
+    const { client, registry, store } = await connect();
     await registry.register(OTHER, 'mainnet', 'Pending', G);
     await registry.whenIdle();
     const all = text(await client.callTool({ name: 'list_contracts', arguments: {} }));
@@ -39,6 +39,13 @@ describe('global MCP server', () => {
     expect(tn.contracts.map((c: any) => c.id)).toEqual([FIXTURE_ID]);
     const q = text(await client.callTool({ name: 'list_contracts', arguments: { q: 'kitchen' } }));
     expect(q.contracts.map((c: any) => c.id)).toEqual([FIXTURE_ID]);
+    // A row that regresses to pending (e.g. a re-check) must disappear from the default listing again,
+    // and only reappear with include_pending (review finding: gate/coverage gap).
+    await store.update(FIXTURE_ID, { status: 'queued' });
+    const hidden = text(await client.callTool({ name: 'list_contracts', arguments: {} }));
+    expect(hidden.contracts.map((c: any) => c.id)).not.toContain(FIXTURE_ID);
+    const shown = text(await client.callTool({ name: 'list_contracts', arguments: { include_pending: true } }));
+    expect(shown.contracts.map((c: any) => c.id)).toContain(FIXTURE_ID);
   });
   it('get_contract returns schemas per function; search_functions and get_docs work; unknown id is an isError envelope', async () => {
     const { client } = await connect();
@@ -78,11 +85,39 @@ describe('global MCP server', () => {
     const badSrc = await client.callTool({ name: 'build', arguments: { id: FIXTURE_ID, fn: 'bump', args: {}, source: 'nope' } });
     expect(text(badSrc)).toMatchObject({ error: 'invalid_args', details: { path: 'source' } });
   });
+  it('build validates fee and timeout_s before any chain call (review finding I1)', async () => {
+    const { client, chain, store } = await connect();
+    await store.update(FIXTURE_ID, { mcpScope: 'rw' });
+    const build = (extra: Record<string, unknown>) => client.callTool({ name: 'build', arguments: { id: FIXTURE_ID, fn: 'bump', args: {}, source: G, ...extra } });
+    const negativeFee = await build({ fee: '-5' });
+    expect(text(negativeFee)).toMatchObject({ error: 'invalid_args', details: { path: 'fee' } });
+    const nonNumericFee = await build({ fee: 'abc' });
+    expect(text(nonNumericFee)).toMatchObject({ error: 'invalid_args', details: { path: 'fee' } });
+    const negativeTimeout = await build({ timeout_s: -10 });
+    expect(text(negativeTimeout)).toMatchObject({ error: 'invalid_args', details: { path: 'timeout_s' } });
+    const hugeTimeout = await build({ timeout_s: 1e15 });
+    expect(text(hugeTimeout)).toMatchObject({ error: 'invalid_args', details: { path: 'timeout_s' } });
+    expect(chain.calls.some((c) => c.method === 'buildTx')).toBe(false);
+  });
+  it('internal errors are logged and never echoed to the client (review finding I2)', async () => {
+    const { client, chain } = await connect();
+    chain.impl.simulate = async () => { throw new Error('connect ECONNREFUSED db:5432'); };
+    const r = await client.callTool({ name: 'call', arguments: { id: FIXTURE_ID, fn: 'add', args: { a: '1', b: '2' } } });
+    expect(r.isError).toBe(true);
+    const body = text(r);
+    expect(body).toEqual({ error: 'internal', message: 'internal error' });
+    expect(body.message).not.toContain('ECONNREFUSED');
+  });
   it('resources: the contract list and a contract\'s llms.txt', async () => {
     const { client } = await connect();
     const list = await client.readResource({ uri: 'sonata://contracts' });
     expect(JSON.parse((list.contents[0] as any).text).contracts[0].id).toBe(FIXTURE_ID);
     const doc = await client.readResource({ uri: `sonata://c/${FIXTURE_ID}/llms.txt` });
     expect((doc.contents[0] as any).text).toMatch(/^# KitchenSink/);
+  });
+  it('a resource read for an unknown contract comes back as envelope text, not a JSON-RPC error (review finding)', async () => {
+    const { client } = await connect();
+    const doc = await client.readResource({ uri: 'sonata://c/CNOPE/llms.txt' });
+    expect((doc.contents[0] as any).text).toContain('contract_not_found');
   });
 });

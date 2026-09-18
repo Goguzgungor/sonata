@@ -3,12 +3,13 @@ import type { contract } from '@stellar/stellar-sdk';
 import type { Deps } from '../http/deps.js';
 import type { ContractModel, McpScope } from '../types.js';
 import { shortId } from '../docs/llms.js';
-import { ok, fail, sig, withSource, toolName, CALL_OUT, BUILD_OUT, TX_OUT, DOCS_OUT, simulate, buildTx, submitTx, searchFunctions, docsOf } from './handlers.js';
+import { ok, failWith, sig, withSource, toolName, CALL_OUT, BUILD_OUT, TX_OUT, DOCS_OUT, simulate, buildTx, submitTx, searchFunctions, docsOf } from './handlers.js';
 import type { Ready } from './handlers.js';
 
 export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope: McpScope, deps: Deps): McpServer {
   const server = new McpServer({ name: `sonata-${(model.name ?? shortId(model.id)).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, version: '0.1.0' });
   const r: Ready = { model, spec };
+  const fail = failWith(deps.log);
 
   for (const f of model.functions) {
     const desc = `${f.doc ? f.doc.trim() + '\n\n' : ''}${sig(f)}\nKind: ${f.kind}. Simulates on ${model.network}; nothing is signed or sent.`;
