@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { api, ApiError, contracts, API_URL, shortId, isContractId, isAccountId, mcpToolCount, relTime } from '@/lib/api';
+import { api, ApiError, contracts, auth, API_URL, shortId, isContractId, isAccountId, mcpToolCount, relTime } from '@/lib/api';
+import { setSession, getSession, clearSession } from '@/lib/session';
 
 const ID = 'CADY5JYDD7VE7M42HLGJILZAYRPJXPA7C7AOOJOLA44ECZDOA4NVULTP';
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 describe('api()', () => {
   beforeEach(() => { vi.stubGlobal('fetch', vi.fn()); });
-  afterEach(() => { vi.unstubAllGlobals(); });
+  afterEach(() => { vi.unstubAllGlobals(); clearSession(); });
 
   it('GETs JSON from API_URL', async () => {
     fetch.mockResolvedValue(json(200, { ok: 1 }));
@@ -65,6 +66,28 @@ describe('api()', () => {
     const err = await api('/x').catch((e) => e);
     expect(err.name).toBe('AbortError');
     expect(err).not.toBeInstanceOf(ApiError);
+  });
+  it('sends Authorization when a session exists and clears it on 401', async () => {
+    setSession({ token: 'tok', address: 'GABC', expires_at: new Date(Date.now() + 60_000).toISOString() });
+    fetch.mockResolvedValue(json(200, []));
+    await contracts.list({ mine: true });
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe(API_URL + '/contracts?owner=me');
+    expect(init.headers.authorization).toBe('Bearer tok');
+    fetch.mockResolvedValue(json(401, { error: 'unauthorized', message: 'nope' }));
+    await expect(api('/auth/me')).rejects.toMatchObject({ status: 401, error: 'unauthorized' });
+    expect(getSession()).toBeNull();
+  });
+  it('auth and submit helpers hit the right routes', async () => {
+    fetch.mockImplementation(() => json(200, {}));
+    await auth.challenge('GABC', 'testnet');
+    expect(fetch.mock.calls[0][0]).toBe(API_URL + '/auth/challenge');
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ address: 'GABC', network: 'testnet' });
+    await auth.token('AAAA', 'mainnet');
+    expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ transaction: 'AAAA', network: 'mainnet' });
+    await contracts.submit(ID, 'AAAA');
+    expect(fetch.mock.calls[2][0]).toBe(`${API_URL}/c/${ID}/submit`);
+    expect(JSON.parse(fetch.mock.calls[2][1].body)).toEqual({ xdr: 'AAAA' });
   });
 });
 
