@@ -32,4 +32,7 @@ describe('normaliseQuery', () => {
   it('accepts a symbol starting with a digit', () => {
     expect(normaliseQuery({ type: '1inch_swap' }, ret).type).toBe('1inch_swap');
   });
+  it('accepts from/to as numbers, not just strings (MCP JSON args may pass a ledger as a number — review finding M4)', () => {
+    expect(normaliseQuery({ from: 150_000, to: 160_000 }, ret)).toMatchObject({ fromLedger: 150_000, toLedger: 160_000 });
+  });
 });

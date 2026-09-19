@@ -33,7 +33,7 @@ export const DOCS_OUT: JsonSchema = { type: 'object', properties: { text: { type
  * lives once, in history/query.ts's normaliseQuery (shared with the REST route) — same pattern as
  * checkBuildOpts's fee/timeout_s validation (review finding I1).
  */
-export const EVENTS_IN: JsonSchema = { type: 'object', properties: { type: { type: 'string', description: 'event name (declared name or on-chain symbol)' }, address: { type: 'string', description: 'G… or C… address appearing in topics or data' }, from: { type: 'string', description: 'ledger sequence or ISO-8601 time' }, to: { type: 'string', description: 'ledger sequence or ISO-8601 time' }, cursor: { type: 'string' }, limit: { type: 'integer' } } };
+export const EVENTS_IN: JsonSchema = { type: 'object', properties: { type: { type: 'string', description: 'event name (declared name or on-chain symbol)' }, address: { type: 'string', description: 'G… or C… address appearing in topics or data' }, from: { type: ['string', 'integer'], description: 'ledger sequence (string or number) or ISO-8601 time' }, to: { type: ['string', 'integer'], description: 'ledger sequence (string or number) or ISO-8601 time' }, cursor: { type: 'string' }, limit: { type: 'integer' } } };
 export const EVENTS_OUT: JsonSchema = { type: 'object', properties: { events: { type: 'array', items: { type: 'object' } }, page: { type: 'object' }, retention: { type: 'object' } }, required: ['events', 'page', 'retention'] };
 export const EVENTS_DESC = 'Decoded contract events from the network RPC (last ~7 days). Filters: type (event name), address (in topics/data), from/to (ledger or ISO time), cursor, limit ≤ 200.';
 

@@ -3,6 +3,7 @@ import { nativeToScVal, xdr } from '@stellar/stellar-sdk';
 import { testApp, OWNER } from '../helpers/app.js';
 import { FIXTURE_ID, loadFixtureWasm } from '../fixtures/index.js';
 import { rpcUnavailable } from '../../src/chain/errors.js';
+import { topicFilters } from '../../src/history/query.js';
 
 const b64 = (v: xdr.ScVal) => v.toXDR('base64');
 const pingedRaw = () => ({
@@ -21,19 +22,20 @@ describe('GET /c/:id/events', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.events[0]).toMatchObject({ event: 'pinged', topics: ['pinged', OWNER], data: { n: 7 } });
-    expect(body.page).toMatchObject({ cursor: 'c1', limit: 50 });
+    // cursor is null even though the source returned 'c1': a 1-event page is short of the 50-event
+    // limit, so it must be the end of the range regardless of what the RPC's own cursor says (I2).
+    expect(body.page).toMatchObject({ cursor: null, limit: 50 });
     expect(body.retention).toMatchObject({ oldest_ledger: 1000, latest_ledger: 200_000, latest_ledger_close_time: RETENTION.latestLedgerCloseTime, note: 'RPC history covers the last ~7 days' });
   });
 
-  it('?type=Pinged (declared name, any case) sends the exact-arity filter row, not the wildcard fallback', async () => {
+  it('?type=Pinged (declared name, any case) resolves to the on-chain symbol and sends the four arity-covering rows', async () => {
     const { app, registerFixture, historySource } = await testApp();
     await registerFixture();
     historySource.pages = [{ events: [], cursor: null, ...RETENTION }];
     const res = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/events?type=PINGED` });
     expect(res.statusCode).toBe(200);
-    const sym = xdr.ScVal.scvSymbol('pinged').toXDR('base64');
     expect(historySource.calls).toHaveLength(1);
-    expect(historySource.calls[0].topics).toEqual([[sym, '*']]);
+    expect(historySource.calls[0].topics).toEqual(topicFilters('pinged'));
   });
 
   it('?format=csv responds text/csv with the header row and an attachment filename', async () => {

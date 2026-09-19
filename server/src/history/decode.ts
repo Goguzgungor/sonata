@@ -7,17 +7,29 @@ import { topicFilters } from './query.js';
 export type DecodedEvent = { id: string; ledger: number; closed_at: string; tx_hash: string; successful: boolean; event: string | null; topics: unknown[]; data: unknown; raw: { topic: string[]; value: string }; explorer_url: string };
 
 /**
- * Builds a `getEvents` topic filter for `type` (a declared event name, a prefix topic, or an
- * arbitrary on-chain symbol). If `type` names a declared SEP-48 event (case-insensitively, by
- * declared name or first prefix topic), returns the SDK's exact-arity filter row for it — prefix
- * topics followed by one `'*'` per topic-list param, via `Spec.eventTopicFilter`. Otherwise falls
- * back to `topicFilters(type)`'s four wildcard rows (1–4 topics) for an undeclared symbol.
+ * Resolves `type` (a declared event name, a prefix topic, or an arbitrary on-chain symbol) to the
+ * symbol `getEvents` topic filters should match on: if `type` names a declared SEP-48 event
+ * (case-insensitively, by declared name or first prefix topic), returns that event's first prefix
+ * topic — the symbol actually emitted on-chain for it. Otherwise returns `type` unchanged.
  */
-export const topicFiltersFor = (spec: contract.Spec, type: string): string[][] => {
+export const resolveSymbol = (spec: contract.Spec, type: string): string => {
   const k = type.toLowerCase();
   const decl = spec.events().find((e) => e.name.toString().toLowerCase() === k || (e.prefixTopics[0]?.toString() ?? '').toLowerCase() === k);
-  return decl ? [spec.eventTopicFilter(decl.name.toString())] : topicFilters(type);
+  return decl?.prefixTopics[0] ? decl.prefixTopics[0].toString() : type;
 };
+
+/**
+ * Builds a `getEvents` topic filter for `type`: resolves it to a symbol via `resolveSymbol`, then
+ * emits `topicFilters`' four arity-covering wildcard rows (1–4 topics) for it. stellar-rpc matches a
+ * topic filter row only against events with exactly that many topics, and a declared event's topic
+ * list can be shorter than what the contract actually emits on-chain — e.g. the built-in SAC's
+ * `Transfer` spec declares 3 topics (`[transfer, from, to]`) but on-chain SAC `transfer` events carry
+ * a 4th (the SEP-11 asset code), so an exact-arity filter built from the spec alone silently empties
+ * the page for every SAC transfer/approve (review finding C1, verified live on testnet). Emitting all
+ * four arities is always correct even for exact matches: `Spec.parseEvent`, which decodes the matched
+ * events, tolerates extra topics.
+ */
+export const topicFiltersFor = (spec: contract.Spec, type: string): string[][] => topicFilters(resolveSymbol(spec, type));
 
 const dec = (b64: string): unknown => toJson(scValToNative(xdr.ScVal.fromXDR(b64, 'base64')));
 const safe = (f: () => unknown): { ok: true; v: unknown } | { ok: false } => { try { return { ok: true, v: f() }; } catch { return { ok: false }; } };

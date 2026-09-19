@@ -14,7 +14,7 @@ POST https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 POST https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/{fn}     build unsigned XDR → { xdr, fee, auth }
 POST https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/submit      relay a signed XDR → { hash, status }
 GET  https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/openapi.json
-GET  https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/events?type=&address=&from=&to=&limit=   decoded events, last ~7 days
+GET  https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/events?type=&address=&from=&to=&cursor=&limit=&format=   decoded events, last ~7 days
 MCP (all contracts): https://api.sonata.test/mcp — tools list_contracts, get_contract, get_events, call, build, submit
 MCP (this contract): https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/mcp
 

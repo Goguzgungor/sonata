@@ -35,7 +35,7 @@ Base URL `PUBLIC_BASE_URL` (prod: `https://api.sonata.brages.uk`). JSON everywhe
 | `GET /tx/:hash?network=` | Poll a submit | same shape |
 | `GET /c/:id/llms.txt` | AI docs | `text/markdown` |
 | `GET /c/:id/openapi.json` | Per-contract OpenAPI 3.1 | JSON |
-| `GET /c/:id/events` `?type&address&from&to&cursor&limit&format` | Decoded events from the network RPC (last ~7 days) | `200 {events: [{id, ledger, closed_at, tx_hash, successful, event, topics, data, raw, explorer_url}], page: {cursor, limit, from_ledger, to_ledger}, retention: {oldest_ledger, latest_ledger, latest_ledger_close_time, note}}` — `format=csv` streams CSV |
+| `GET /c/:id/events` `?type&address&from&to&cursor&limit&format` | Decoded events from the network RPC (last ~7 days) | `200 {events: [{id, ledger, closed_at, tx_hash, successful, event, topics, data, raw, explorer_url}], page: {cursor, limit, from_ledger, to_ledger}, retention: {oldest_ledger, latest_ledger, latest_ledger_close_time, note}}` — `format=csv` returns one page (≤ 200 rows) as CSV |
 | `GET /healthz` | Liveness | `200 {db: 'ok', networks: {testnet: 'ok'}}` |
 | `ALL /mcp` | Global MCP (all contracts) | Streamable HTTP |
 

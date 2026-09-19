@@ -6,6 +6,7 @@ import { testApp } from '../helpers/app.js';
 import { FIXTURE_ID } from '../fixtures/index.js';
 import { buildMcpServer } from '../../src/mcp/tools.js';
 import { ChainError } from '../../src/chain/errors.js';
+import { topicFilters } from '../../src/history/query.js';
 
 const G = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
 const b64 = (v: xdr.ScVal) => v.toXDR('base64');
@@ -97,9 +98,19 @@ describe('buildMcpServer', () => {
     const r = await client.callTool({ name: 'get_events', arguments: { type: 'Pinged', limit: 5 } });
     expect(r.isError).toBeFalsy();
     expect((r.structuredContent as any).events[0]).toMatchObject({ event: 'pinged', data: { n: 7 } });
-    const sym = xdr.ScVal.scvSymbol('pinged').toXDR('base64');
-    expect(historySource.calls[0].topics).toEqual([[sym, '*']]);
+    expect(historySource.calls[0].topics).toEqual(topicFilters('pinged'));
     expect(historySource.calls[0].limit).toBe(5);
+  });
+  it('get_events accepts from as a JSON number, not just a string (review finding M4)', async () => {
+    const { client, historySource } = await connect('ro');
+    historySource.pages = [{ events: [], cursor: null, ...RETENTION }];
+    const r = await client.callTool({ name: 'get_events', arguments: { from: 123, limit: 5 } });
+    expect(r.isError).toBeFalsy();
+    // 123 is well below retention's oldestLedger (1000), so it's clamped up — the point is that the
+    // numeric 123 reached normaliseQuery's ledger parser at all, instead of failing MCP's own
+    // JSON-schema validation (a transport-level ProtocolError, not the invalid_args envelope) because
+    // the input schema declared `from` as string-only.
+    expect(historySource.calls[0].startLedger).toBe(1000);
   });
   it('get_events with limit: 0 is isError invalid_args', async () => {
     const { client } = await connect('ro');

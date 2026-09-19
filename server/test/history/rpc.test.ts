@@ -34,12 +34,46 @@ describe('RpcHistorySource', () => {
     const t = source({ getEvents: vi.fn().mockRejectedValue(new Error('connect ECONNREFUSED')) });
     await expect(t.events({ contractId: FIXTURE_ID, network: 'testnet', startLedger: 1, limit: 1 })).rejects.toMatchObject({ status: 502, error: 'rpc_unavailable' });
   });
-  it('retention() uses getLatestLedger + a 1-event probe and caches for 60 s', async () => {
+  it('a startLedger above a lagging node\'s head is 502 rpc_unavailable, not 400 (review finding I1c)', async () => {
+    // The caller's startLedger (490) is within retention (>= the parsed oldest bound, 10) — the range
+    // error here is a slower node not having reached the head yet, not the caller asking for history
+    // outside the window, so it must not be misreported as a client-side range_out_of_retention.
+    const s = source({ getEvents: vi.fn().mockRejectedValue(new Error('startLedger must be within the ledger range: 10 - 480')) });
+    await expect(s.events({ contractId: FIXTURE_ID, network: 'testnet', startLedger: 490, limit: 1 })).rejects.toMatchObject({ status: 502, error: 'rpc_unavailable' });
+  });
+  it('a bad cursor maps to 400 invalid_args at path cursor, not 502', async () => {
+    const s = source({ getEvents: vi.fn().mockRejectedValue({ code: -32602, message: 'invalid parameters', data: 'invalid event id garbage' }) });
+    await expect(s.events({ contractId: FIXTURE_ID, network: 'testnet', startLedger: 1, cursor: 'garbage', limit: 1 })).rejects.toMatchObject({ status: 400, error: 'invalid_args', extra: { details: { path: 'cursor' } } });
+  });
+  it('rpc_unavailable carries the network name, not the literal "rpc"', async () => {
+    const s = source({ getEvents: vi.fn().mockRejectedValue(new Error('connect ECONNREFUSED')) });
+    await expect(s.events({ contractId: FIXTURE_ID, network: 'testnet', startLedger: 1, limit: 1 })).rejects.toMatchObject({ message: expect.stringContaining('RPC for testnet unavailable') });
+  });
+  it('retention() uses getLatestLedger + a 1-event probe (backed off from the head) and caches for 60 s', async () => {
     const getLatestLedger = vi.fn().mockResolvedValue({ sequence: 200 });
     const getEvents = vi.fn().mockResolvedValue({ ...page, events: [] });
     const s = source({ getLatestLedger, getEvents });
     expect(await s.retention('testnet')).toEqual({ oldestLedger: 10, latestLedger: 200, latestLedgerCloseTime: new Date(1789751923 * 1000).toISOString() });
+    expect(getEvents.mock.calls[0][0]).toMatchObject({ startLedger: 180 });   // 200 - PROBE_LAG(20)
     await s.retention('testnet');
     expect(getEvents).toHaveBeenCalledTimes(1);
+  });
+  it('retention() recovers from a lagging probe by parsing the range error\'s own bounds (review finding I1b)', async () => {
+    const getLatestLedger = vi.fn().mockResolvedValue({ sequence: 500 });
+    const getEvents = vi.fn()
+      .mockRejectedValueOnce(new Error('startLedger must be within the ledger range: 350 - 470'))   // first probe (at 480) still ahead of the lagging node's head (470)
+      .mockResolvedValueOnce({ ...page, events: [], latestLedgerCloseTime: '1789751923' });          // re-probe at 450 succeeds
+    const s = source({ getLatestLedger, getEvents });
+    expect(await s.retention('testnet')).toEqual({ oldestLedger: 350, latestLedger: 470, latestLedgerCloseTime: new Date(1789751923 * 1000).toISOString() });
+    expect(getEvents.mock.calls[0][0]).toMatchObject({ startLedger: 480 });
+    expect(getEvents.mock.calls[1][0]).toMatchObject({ startLedger: 450 });
+  });
+  it('retention() throws rpc_unavailable when the re-probe after a range error also fails', async () => {
+    const getLatestLedger = vi.fn().mockResolvedValue({ sequence: 500 });
+    const getEvents = vi.fn()
+      .mockRejectedValueOnce(new Error('startLedger must be within the ledger range: 350 - 470'))
+      .mockRejectedValueOnce(new Error('connect ECONNREFUSED'));
+    const s = source({ getLatestLedger, getEvents });
+    await expect(s.retention('testnet')).rejects.toMatchObject({ status: 502, error: 'rpc_unavailable' });
   });
 });

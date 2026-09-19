@@ -10,10 +10,13 @@ export type Normalised = { type?: string; address?: string; fromLedger: number; 
 export const topicFilters = (symbol: string): string[][] => { const s = xdr.ScVal.scvSymbol(symbol).toXDR('base64'); return [[s], [s, '*'], [s, '*', '*'], [s, '*', '*', '*']]; };
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+/** Accepts a string (REST query params are always strings) or a number (MCP JSON args may pass a ledger as a number — review finding M4); `String(v)` before the ledger-sequence/ISO-time checks covers both. */
 function toLedger(v: unknown, path: string, r: Retention): number {
-  if (typeof v !== 'string' || v === '') throw badRequest('invalid_args', `${path} must be a ledger sequence or an ISO-8601 time`, { path });
-  if (/^\d+$/.test(v)) return Number(v);
-  const t = Date.parse(v); if (Number.isNaN(t)) throw badRequest('invalid_args', `${path} must be a ledger sequence or an ISO-8601 time`, { path });
+  if (typeof v !== 'string' && typeof v !== 'number') throw badRequest('invalid_args', `${path} must be a ledger sequence or an ISO-8601 time`, { path });
+  const s = String(v);
+  if (s === '') throw badRequest('invalid_args', `${path} must be a ledger sequence or an ISO-8601 time`, { path });
+  if (/^\d+$/.test(s)) return Number(s);
+  const t = Date.parse(s); if (Number.isNaN(t)) throw badRequest('invalid_args', `${path} must be a ledger sequence or an ISO-8601 time`, { path });
   return r.latestLedger - Math.round((Date.parse(r.latestLedgerCloseTime) - t) / 1000 / LEDGER_SECONDS);
 }
 export function normaliseQuery(raw: Record<string, unknown>, r: Retention): Normalised {
