@@ -55,10 +55,11 @@ test('owner: register → workspace controls → rename → scope → simulate �
   await expect(page.getByText('All contracts (recommended)')).toBeVisible();
   await expect(page.getByText(`${API}/mcp`).first()).toBeVisible();
   await page.getByRole('radio', { name: 'Read + write' }).click();
-  await expect(page.getByText(`Tools · ${n * 2 + 3} enabled`)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(`Tools · ${n * 2 + 4} enabled`)).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole('tab', { name: /History/ }).click();
-  await expect(page.getByText("History isn't live yet.")).toBeVisible();
+  await expect(page.getByText(/covers the last ~7 days/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/No events in this window\.|pinged/).first()).toBeVisible({ timeout: 20_000 });
 
   await page.goto('/explorer');
   await expect(page.getByText(ID)).toBeVisible({ timeout: 15_000 });

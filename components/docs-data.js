@@ -26,7 +26,7 @@ export const DOCS = [
         { p: 'The wallet that registers a contract owns it: only the owner can rename it, change its MCP scope or refresh it. Anyone can read a contract, simulate its functions, build transactions and submit signed ones.' }
       ] },
       { h: 'History', blocks: [
-        { p: "History (decoded events and calls) is not live yet; it arrives with a history provider in a later release." }
+        { p: "GET /c/{contractId}/events reads decoded contract events straight from the network's RPC — nothing is indexed or stored, so the window covers roughly the last 7 days." }
       ] }
     ]
   },
@@ -78,6 +78,7 @@ curl -X POST "${API_URL}/c/{contractId}/submit" \\
           { key: 'POST /c/{id}/call/{fn}', value: 'Simulate a function', mono: false },
           { key: 'POST /c/{id}/tx/{fn}', value: 'Build unsigned XDR for a function', mono: false },
           { key: 'POST /c/{id}/submit', value: 'Submit a signed transaction', mono: false },
+          { key: 'GET /c/{id}/events', value: '?type&address&from&to&cursor&limit&format → decoded events from the last ~7 days; format=csv for a CSV download', mono: false },
           { key: 'GET /tx/{hash}?network=', value: 'Look up a submitted transaction', mono: false },
           { key: 'GET /c/{id}/llms.txt', value: 'AI-ready docs', mono: false },
           { key: 'GET /c/{id}/openapi.json', value: 'OpenAPI 3.1 document', mono: false },
@@ -106,6 +107,9 @@ curl -X POST "${API_URL}/c/{contractId}/submit" \\
       ] },
       { h: 'Authentication and limits', blocks: [
         { p: 'Registering a contract or changing its settings needs a session: sign a SEP-10-style challenge with your wallet to get a bearer token valid for 24 hours. Reads, simulation, transaction building and submission need no session. The API allows 120 requests per minute per IP. Stellar Asset Contracts (XLM, USDC, …) are supported through the built-in token interface.' }
+      ] },
+      { h: 'Event history', blocks: [
+        { p: 'GET /c/{id}/events decodes contract events on demand from the network’s RPC — nothing is indexed or stored, so the window covers roughly the last 7 days. type matches a declared event name (e.g. Pinged) or the raw on-chain symbol; from and to accept a ledger sequence or an ISO-8601 time and are clamped to the retention window; address post-filters the fetched page for a G… or C… address appearing anywhere in an event’s topics or data; a range entirely outside the window returns range_out_of_retention. format=csv returns the same rows as text/csv instead of JSON.' }
       ] }
     ]
   },
@@ -128,6 +132,7 @@ ${mcpGlobalOneLiner}` }
           { key: 'get_contract', value: '{ id } → functions with JSON schemas, types, errors, events, mcp_scope, owner, urls', mono: false },
           { key: 'search_functions', value: '{ id, query } → matching functions by name or purpose', mono: false },
           { key: 'get_docs', value: '{ id } → llms.txt for the contract', mono: false },
+          { key: 'get_events', value: '{ id, type?, address?, from?, to?, cursor?, limit? } → decoded events (last ~7 days)', mono: false },
           { key: 'call', value: '{ id, fn, args?, source? } → simulate any function, read or write', mono: false },
           { key: 'build', value: '{ id, fn, args?, source, fee?, timeout_s? } → unsigned XDR for the user’s wallet to sign', mono: false },
           { key: 'submit', value: '{ id, xdr } → submit a signed transaction, wait up to 30 s. id selects the network and the write gate; the envelope itself is any signed transaction on that network.', mono: false },
@@ -136,7 +141,7 @@ ${mcpGlobalOneLiner}` }
         { p: 'build and submit only work for a contract whose owner has switched its MCP scope to read + write; every other tool works regardless of scope. Agents never hold keys: they receive unsigned XDR and hand it to a signer.' }
       ] },
       { h: 'Scoped endpoints', blocks: [
-        { p: `Each registered contract also exposes its own scoped MCP server, narrowed to just that contract's tools (search_functions, get_docs, call_{fn}, and build_{fn} / submit_transaction once the owner enables read + write): claude mcp add --transport http sonata-<name> ${API_URL}/c/{contractId}/mcp` }
+        { p: `Each registered contract also exposes its own scoped MCP server, narrowed to just that contract's tools (search_functions, get_docs, get_events, call_{fn}, and build_{fn} / submit_transaction once the owner enables read + write): claude mcp add --transport http sonata-<name> ${API_URL}/c/{contractId}/mcp` }
       ] }
     ]
   },

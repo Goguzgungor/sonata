@@ -3,7 +3,7 @@ import type { Deps } from '../http/deps.js';
 import type { ContractRow } from '../registry/store.js';
 import type { JsonSchema } from '../types.js';
 import { ApiError } from '../errors.js';
-import { ok, failWith, sig, simulate, buildTx, submitTx, getTx, searchFunctions, docsOf, CALL_OUT, BUILD_OUT, TX_OUT, DOCS_OUT, type Ready } from './handlers.js';
+import { ok, failWith, sig, simulate, buildTx, submitTx, getTx, searchFunctions, docsOf, getEvents, CALL_OUT, BUILD_OUT, TX_OUT, DOCS_OUT, EVENTS_IN, EVENTS_OUT, EVENTS_DESC, type Ready } from './handlers.js';
 
 const NET = { type: 'string', enum: ['testnet', 'mainnet'] };
 const ARGS = { type: 'object', description: 'Function arguments by name — get the schema from get_contract. ≥64-bit ints are decimal strings, bytes 0x-hex, maps objects, enums integers, unions "Name" or {tag, values}.', additionalProperties: true };
@@ -42,6 +42,10 @@ export function buildGlobalMcpServer(deps: Deps): McpServer {
     async ({ id, query }) => { try { const { model } = await ready(id); return ok({ functions: searchFunctions(model, query) }); } catch (e) { return fail(e); } });
   server.registerTool('get_docs', { description: 'llms.txt for a contract.', inputSchema: fromJsonSchema<{ id: string }>({ type: 'object', properties: { id: { type: 'string' } }, required: ['id'] }), outputSchema: fromJsonSchema(DOCS_OUT) },
     async ({ id }) => { try { const t = await docsOf(deps, id); return { content: [{ type: 'text' as const, text: t }], structuredContent: { text: t } }; } catch (e) { return fail(e); } });
+  server.registerTool('get_events', { description: EVENTS_DESC, inputSchema: fromJsonSchema<{ id: string } & Record<string, unknown>>({ type: 'object', properties: { id: { type: 'string' }, ...EVENTS_IN.properties as object }, required: ['id'] }), outputSchema: fromJsonSchema(EVENTS_OUT) },
+    // No separate ready(id) here (review finding M3): history.query() resolves the contract itself
+    // via the same registryReady, with identical 404/409 semantics — a second resolve was redundant.
+    async ({ id, ...args }) => { try { return ok(await getEvents(deps, id, args)); } catch (e) { return fail(e); } });
   server.registerTool('call', { description: 'Simulate a contract function (any function, read or write). Nothing is signed or sent. Use get_contract for the args schema.', inputSchema: fromJsonSchema<{ id: string; fn: string; args?: Record<string, unknown>; source?: string }>({ type: 'object', properties: { id: { type: 'string' }, fn: { type: 'string' }, args: ARGS, source: { type: 'string', description: 'G… account used as transaction source (optional)' } }, required: ['id', 'fn'] }), outputSchema: fromJsonSchema(CALL_OUT) },
     async ({ id, fn, args, source }) => { try { const r = await ready(id); return ok(await simulate(deps, r, fn, args ?? {}, source)); } catch (e) { return fail(e); } });
   server.registerTool('build', { description: 'Build an UNSIGNED transaction for a contract function; returns XDR for the user\'s wallet to sign. Only for contracts whose owner enabled read + write.', inputSchema: fromJsonSchema<{ id: string; fn: string; args?: Record<string, unknown>; source: string; fee?: string; timeout_s?: number }>({ type: 'object', properties: { id: { type: 'string' }, fn: { type: 'string' }, args: ARGS, source: { type: 'string', description: 'G… account that will sign' }, fee: { type: 'string' }, timeout_s: { type: 'integer' } }, required: ['id', 'fn', 'source'] }), outputSchema: fromJsonSchema(BUILD_OUT) },

@@ -22,6 +22,15 @@ export function openapi(m: ContractModel, cfg: { publicBaseUrl: string }): JsonS
   paths[`${p}`] = { get: { operationId: 'get_contract', summary: 'Contract model and settings', tags: ['contract'], responses: { '200': { description: 'Model', ...json({ type: 'object' }) }, '404': err('Unknown contract') } } };
   paths[`${p}/status`] = { get: { operationId: 'get_status', summary: 'Registration pipeline status', tags: ['contract'], responses: { '200': { description: 'Status', ...json({ type: 'object', properties: { status: { type: 'string' }, steps: { type: 'array' } } }) }, '404': err('Unknown contract') } } };
   paths[`${p}/llms.txt`] = { get: { operationId: 'get_llms', summary: 'AI-ready docs', tags: ['docs'], responses: { '200': { description: 'Markdown', content: { 'text/markdown': { schema: { type: 'string' } } } } } } };
+  paths[`${p}/events`] = { get: { operationId: 'get_events', summary: 'Decoded contract events (last ~7 days, from the network RPC)', tags: ['events'], parameters: [
+    { name: 'type', in: 'query', schema: { type: 'string' }, description: 'Declared event name (or any topic[0] symbol) to filter on' },
+    { name: 'address', in: 'query', schema: { type: 'string' }, description: 'G… or C… address that must appear in the topics or data' },
+    { name: 'from', in: 'query', schema: { type: 'string' }, description: 'Ledger sequence or ISO-8601 time (default: ~24h before `to`)' },
+    { name: 'to', in: 'query', schema: { type: 'string' }, description: 'Ledger sequence or ISO-8601 time (default: latest retained ledger)' },
+    { name: 'cursor', in: 'query', schema: { type: 'string' }, description: 'Pagination cursor from a previous page' },
+    { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 } },
+    { name: 'format', in: 'query', schema: { type: 'string', enum: ['json', 'csv'], default: 'json' } }
+  ], responses: { '200': { description: 'Events page', ...json({ type: 'object', required: ['events', 'page', 'retention'], properties: { events: { type: 'array', items: { type: 'object' } }, page: { type: 'object' }, retention: { type: 'object' } } }) }, '400': err('Invalid query or range outside retention'), '404': err('Unknown contract'), '409': err('Contract not ready'), '502': err('RPC unavailable') } } };
   const schemas: Record<string, JsonSchema> = { Error: ERROR };
   for (const t of m.types) schemas[t.name] = t.jsonSchema;
   return {

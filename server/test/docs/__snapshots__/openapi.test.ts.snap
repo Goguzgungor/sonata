@@ -2406,6 +2406,150 @@ exports[`openapi > is stable 1`] = `
         ],
       },
     },
+    "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/events": {
+      "get": {
+        "operationId": "get_events",
+        "parameters": [
+          {
+            "description": "Declared event name (or any topic[0] symbol) to filter on",
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "G… or C… address that must appear in the topics or data",
+            "in": "query",
+            "name": "address",
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "Ledger sequence or ISO-8601 time (default: ~24h before \`to\`)",
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "Ledger sequence or ISO-8601 time (default: latest retained ledger)",
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "Pagination cursor from a previous page",
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer",
+            },
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "default": "json",
+              "enum": [
+                "json",
+                "csv",
+              ],
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "events": {
+                      "items": {
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                    "page": {
+                      "type": "object",
+                    },
+                    "retention": {
+                      "type": "object",
+                    },
+                  },
+                  "required": [
+                    "events",
+                    "page",
+                    "retention",
+                  ],
+                  "type": "object",
+                },
+              },
+            },
+            "description": "Events page",
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Invalid query or range outside retention",
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Unknown contract",
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "Contract not ready",
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error",
+                },
+              },
+            },
+            "description": "RPC unavailable",
+          },
+        },
+        "summary": "Decoded contract events (last ~7 days, from the network RPC)",
+        "tags": [
+          "events",
+        ],
+      },
+    },
     "/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/llms.txt": {
       "get": {
         "operationId": "get_llms",

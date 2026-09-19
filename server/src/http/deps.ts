@@ -5,5 +5,6 @@ import type { Registry } from '../registry/registry.js';
 import type { Store } from '../registry/store.js';
 import type { AuthKeys } from '../auth/keys.js';
 import type { ChallengeDeps, ChallengeVerifier } from '../auth/challenge.js';
+import type { HistoryService } from '../history/service.js';
 export type Auth = { keys: AuthKeys; challenge: ChallengeDeps; verifier: ChallengeVerifier };
-export type Deps = { cfg: Config; chain: Chain; registry: Registry; store: Store; log: pino.Logger; auth: Auth };
+export type Deps = { cfg: Config; chain: Chain; registry: Registry; store: Store; log: pino.Logger; auth: Auth; history: HistoryService };

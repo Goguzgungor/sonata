@@ -51,6 +51,14 @@ describe('api()', () => {
     expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ args: { who: 'G', n: 1 }, source: 'GSRC', timeout_s: 60 });
     expect(fetch.mock.calls[1][0]).toBe(`${API_URL}/c/${ID}/tx/ping`);
   });
+  it('events builds the query string, skipping empty params', async () => {
+    fetch.mockImplementation(() => json(200, { events: [], page: {}, retention: {} }));
+    await contracts.events(ID, { type: 'Pinged', limit: 50, address: '' });
+    expect(fetch.mock.calls[0][0]).toBe(`${API_URL}/c/${ID}/events?type=Pinged&limit=50`);
+  });
+  it('eventsCsvUrl always ends with format=csv', () => {
+    expect(contracts.eventsCsvUrl(ID, { type: 'Pinged' })).toBe(`${API_URL}/c/${ID}/events?type=Pinged&format=csv`);
+  });
   it('encodes id and fn path segments', async () => {
     fetch.mockImplementation(() => json(200, {}));
     await contracts.call(ID, 'weird fn/name', {});
@@ -107,12 +115,12 @@ describe('helpers', () => {
     expect(isContractId(ID)).toBe(true); expect(isContractId('nope')).toBe(false);
     expect(isAccountId('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF')).toBe(true); expect(isAccountId(ID)).toBe(false);
   });
-  it('mcpToolCount matches the server: N+2 read-only, 2N+3 read+write', () => {
+  it('mcpToolCount matches the server: N+3 read-only, 2N+4 read+write', () => {
     const c = (n, mcp_scope) => ({ mcp_scope, functions: Array.from({ length: n }, (_, i) => ({ name: `f${i}` })) });
-    expect(mcpToolCount(c(15, 'ro'))).toBe(17);       // 15 call_* + search_functions + get_docs
-    expect(mcpToolCount(c(15, 'rw'))).toBe(33);       // + 15 build_* + submit_transaction
-    expect(mcpToolCount(c(0, 'ro'))).toBe(2);
-    expect(mcpToolCount(c(0, 'rw'))).toBe(3);
+    expect(mcpToolCount(c(15, 'ro'))).toBe(18);       // 15 call_* + search_functions + get_docs + get_events
+    expect(mcpToolCount(c(15, 'rw'))).toBe(34);       // + 15 build_* + submit_transaction
+    expect(mcpToolCount(c(0, 'ro'))).toBe(3);
+    expect(mcpToolCount(c(0, 'rw'))).toBe(4);
   });
   it('relTime crosses just now / m / h / d on the boundary', () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-09-18T12:00:00Z'));

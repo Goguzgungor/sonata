@@ -2,6 +2,8 @@ import pg from 'pg';
 import pino from 'pino';
 import { loadConfig } from './config.js';
 import { RpcChain } from './chain/rpc.js';
+import { RpcHistorySource } from './history/rpc.js';
+import { HistoryService } from './history/service.js';
 import { PgStore } from './registry/store.js';
 import { Registry } from './registry/registry.js';
 import { runMigrations } from './registry/migrate.js';
@@ -21,7 +23,8 @@ const challenge = { signing: keys.signing, homeDomain: cfg.authHomeDomain, webAu
 const auth = { keys, challenge, verifier: new ChallengeVerifier(challenge) };
 const chain = new RpcChain(cfg);
 const registry = new Registry({ store, chain, gen: { llmsTxt: (m) => llmsTxt(m, cfg), openapi: (m) => openapi(m, cfg) } });
-const app = buildApp({ cfg, chain, registry, store, log, auth });
+const history = new HistoryService(new RpcHistorySource(cfg), (id) => registry.ready(id));
+const app = buildApp({ cfg, chain, registry, store, log, auth, history });
 await app.listen({ port: cfg.port, host: '0.0.0.0' });
 log.info({ port: cfg.port, networks: Object.keys(cfg.networks), base: cfg.publicBaseUrl, homeDomain: cfg.authHomeDomain }, 'sonata server up');
 let closing = false;

@@ -9,7 +9,7 @@ const RPC_TIMEOUT_MS = 10_000;
 
 /** How an rpc.Server is made for a network. Injectable so tests can drive submit()/getContractWasm() against a stub. */
 export type ServerFactory = (n: NetworkConfig) => rpc.Server;
-const defaultServerFactory: ServerFactory = (n) => new rpc.Server(n.rpcUrl, { allowHttp: n.rpcUrl.startsWith('http://'), timeout: RPC_TIMEOUT_MS });
+export const defaultServerFactory: ServerFactory = (n) => new rpc.Server(n.rpcUrl, { allowHttp: n.rpcUrl.startsWith('http://'), timeout: RPC_TIMEOUT_MS });
 
 /**
  * stellar-sdk 17.1 rejects with a PLAIN OBJECT `{ code: 404, message }` — not an Error — when a

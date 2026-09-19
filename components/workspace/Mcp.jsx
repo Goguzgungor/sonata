@@ -33,6 +33,7 @@ export default function Mcp({ S, contract: c, id, refetch, isOwner }) {
     ...c.functions.map((f) => ({ tool: `build_${f.name}`, src: 'contract', write: true, on: rw })),
     { tool: 'submit_transaction', src: 'contract', write: true, on: rw },
     { tool: 'search_functions', src: 'docs', write: false, on: true },
+    { tool: 'get_events', src: 'history', write: false, on: true },
     { tool: 'get_docs', src: 'docs', write: false, on: true }
   ];
   const rows = tools.map((t, i) => ({

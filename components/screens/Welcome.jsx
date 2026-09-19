@@ -38,7 +38,7 @@ export default function Welcome() {
   const stats = [
     { label: 'Contracts registered', value: list.data ? String(ready.length) : '—' },
     { label: 'Functions exposed', value: list.data ? fns.toLocaleString('en-US') : '—' },
-    { label: 'MCP tools', value: list.data ? ready.reduce((n, c) => n + c.fns + 2, 0).toLocaleString('en-US') : '—', note: 'read-only scope' },
+    { label: 'MCP tools', value: list.data ? ready.reduce((n, c) => n + c.fns + 3, 0).toLocaleString('en-US') : '—', note: 'read-only scope' },
     { label: 'Networks live', value: networks === null ? '—' : String(networks), note: hz.data ? Object.keys(hz.data.networks).join(' · ') : '' }
   ];
   const ex = detail.data;
