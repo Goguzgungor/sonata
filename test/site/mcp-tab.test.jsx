@@ -33,4 +33,9 @@ describe('Mcp tab', () => {
     expect(screen.getAllByText((t) => t.includes(c.urls.mcp)).length).toBeGreaterThan(0);
     expect(screen.getByText('The global endpoint exposes this contract through call / build / submit under the same scope.')).toBeTruthy();
   });
+  it('lists get_events among the tools, enabled regardless of scope', () => {
+    render(<Mcp S={S} contract={c} id={c.id} refetch={() => {}} isOwner={false} />);
+    expect(screen.getByText('get_events')).toBeTruthy();
+    expect(screen.getByText('Tools · 5 enabled')).toBeTruthy(); // 2 call_* + search_functions + get_events + get_docs
+  });
 });

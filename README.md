@@ -1,6 +1,6 @@
 # Sonata — Next.js site
 
-Sonata demo front-end (Soroban contract → REST API, MCP server, docs, indexed history) as a Next.js 15 App Router project, styled with @sonata/ui.
+Sonata demo front-end (Soroban contract → REST API, MCP server, docs, event history) as a Next.js 15 App Router project, styled with @sonata/ui.
 
 ## Run locally
 ```bash

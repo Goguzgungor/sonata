@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { contracts, relTime } from '@/lib/api';
 import { useApi } from '@/lib/useApi';
 import { download } from '@/lib/sonata';
@@ -47,6 +47,8 @@ export default function History({ S, contract: c, id }) {
   const [expanded, setExpanded] = useState(() => new Set());
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreErr, setMoreErr] = useState(null);
+  const gen = useRef(0);         // bumped whenever the filter set produces a fresh first page; loadMore ignores a response from a stale generation
+  const moreCtrl = useRef(null); // AbortController for an in-flight "Load more" request
 
   const filters = () => ({
     type: type && type !== 'all' ? type : undefined,
@@ -61,15 +63,21 @@ export default function History({ S, contract: c, id }) {
   );
 
   // A fresh first page (new data reference, from the filters changing or a refetch) resets the
-  // accumulated rows. Adjusted during render (not a useEffect) so the retention banner — which
-  // reads `data` directly — never paints a frame ahead of `list`.
+  // accumulated rows and invalidates any in-flight "Load more" for the previous filter set.
+  // Adjusted during render (not a useEffect) so the retention banner — which reads `data`
+  // directly — never paints a frame ahead of `list`.
   if (data !== seenData) {
+    gen.current += 1;
     setSeenData(data);
     setList(data ? data.events : []);
     setCursor(data ? data.page.cursor : null);
     setExpanded(new Set());
     setMoreErr(null);
+    setLoadingMore(false);
   }
+
+  // Cancels an in-flight "Load more" request when the filters change again or the tab unmounts.
+  useEffect(() => () => moreCtrl.current?.abort(), [id, type, address, from, to]);
 
   const stats = useMemo(() => {
     const types = new Set(); const addrs = new Set();
@@ -83,13 +91,21 @@ export default function History({ S, contract: c, id }) {
 
   const loadMore = async () => {
     if (!cursor) return;
+    const g = gen.current;
+    const ctrl = new AbortController();
+    moreCtrl.current = ctrl;
     setLoadingMore(true); setMoreErr(null);
     try {
-      const next = await contracts.events(id, { ...filters(), limit: 50, cursor });
+      const next = await contracts.events(id, { ...filters(), limit: 50, cursor }, { signal: ctrl.signal });
+      if (gen.current !== g) return; // the filters changed while this request was in flight; its page belongs to a stale query
       setList((l) => [...l, ...next.events]);
       setCursor(next.page.cursor);
-    } catch (e) { setMoreErr(e); }
-    finally { setLoadingMore(false); }
+    } catch (e) {
+      if (gen.current !== g || e?.name === 'AbortError') return;
+      setMoreErr(e);
+    } finally {
+      if (gen.current === g) setLoadingMore(false);
+    }
   };
 
   const toggleRaw = (rowId) => setExpanded((s) => { const n = new Set(s); if (n.has(rowId)) n.delete(rowId); else n.add(rowId); return n; });
@@ -104,7 +120,7 @@ export default function History({ S, contract: c, id }) {
     data: (
       <div>
         <div className="sn-mono" style={{ maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{decodedSummary(e.data)}</div>
-        <button type="button" className="crumb" style={{ background: 'none', border: 0, padding: 0, marginTop: 4, font: 'inherit', cursor: 'pointer' }} onClick={() => toggleRaw(e.id)}>
+        <button type="button" className="crumb" aria-pressed={expanded.has(e.id)} style={{ background: 'none', border: 0, padding: 0, marginTop: 4, font: 'inherit', cursor: 'pointer' }} onClick={() => toggleRaw(e.id)}>
           {expanded.has(e.id) ? 'Hide raw' : 'Raw'}
         </button>
         {expanded.has(e.id) && (
@@ -116,7 +132,7 @@ export default function History({ S, contract: c, id }) {
     ),
     ledger: e.ledger,
     tx: <a className="crumb" href={e.explorer_url} target="_blank" rel="noreferrer">{shortHash(e.tx_hash)}</a>,
-    status: <S.Chip tone={e.successful ? 'good' : 'bad'}>{e.successful ? 'ok' : 'failed'}</S.Chip>
+    status: <S.Chip tone={e.successful ? 'good' : 'failed'}>{e.successful ? 'ok' : 'failed'}</S.Chip>
   }));
 
   return (

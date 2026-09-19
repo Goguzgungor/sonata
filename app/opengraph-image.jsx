@@ -64,7 +64,7 @@ export default async function Image() {
           <div style={{ fontSize: 76, lineHeight: 1, fontWeight: 800, letterSpacing: -3, marginTop: 6 }}>for Stellar contracts.</div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: `2px solid ${INK}`, paddingTop: 20 }}>
-          <div style={{ fontSize: 24, color: INK2 }}>REST API · MCP server · AI-ready docs · Indexed history</div>
+          <div style={{ fontSize: 24, color: INK2 }}>REST API · MCP server · AI-ready docs · Event history</div>
           <div style={{ fontSize: 22, color: INK2, letterSpacing: 2 }}>sonata.brages.uk</div>
         </div>
       </div>
