@@ -13,6 +13,9 @@ describe('normaliseQuery', () => {
     expect(normaliseQuery({ from: oneHourAgo }, ret).fromLedger).toBe(200_000 - Math.round(3600 / 5.5));
     expect(normaliseQuery({ to: '9999999' }, ret).toLedger).toBe(200_000);
   });
+  it('clamps both ends before comparing, so an out-of-range from does not falsely read as after to', () => {
+    expect(normaliseQuery({ from: '9999999' }, ret)).toMatchObject({ fromLedger: 200_000, toLedger: 200_000 });
+  });
   it('rejects bad input with invalid_args + path', () => {
     for (const [raw, path] of [[{ limit: '0' }, 'limit'], [{ limit: '201' }, 'limit'], [{ from: 'yesterday' }, 'from'], [{ address: 'nope' }, 'address'], [{ format: 'xml' }, 'format'], [{ from: '5000', to: '4000' }, 'to']] as const) {
       expect(() => normaliseQuery(raw as any, ret)).toThrow(expect.objectContaining({ status: 400, error: 'invalid_args', extra: { details: { path } } }));
@@ -25,5 +28,8 @@ describe('normaliseQuery', () => {
     const sym = xdr.ScVal.scvSymbol('transfer').toXDR('base64');
     expect(topicFilters('transfer')).toEqual([[sym], [sym, '*'], [sym, '*', '*'], [sym, '*', '*', '*']]);
     expect(normaliseQuery({ type: 'Transfer' }, ret).type).toBe('Transfer');
+  });
+  it('accepts a symbol starting with a digit', () => {
+    expect(normaliseQuery({ type: '1inch_swap' }, ret).type).toBe('1inch_swap');
   });
 });

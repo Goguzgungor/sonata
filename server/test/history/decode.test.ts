@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { nativeToScVal, xdr } from '@stellar/stellar-sdk';
-import { decodeEvent, matchesAddress, topicFiltersFor } from '../../src/history/decode.js';
+import { decodeEvent, matchesAddress, topicFiltersFor, type DecodedEvent } from '../../src/history/decode.js';
 import { toCsv } from '../../src/history/csv.js';
 import { topicFilters } from '../../src/history/query.js';
 import { loadFixtureWasm } from '../fixtures/index.js';
@@ -44,5 +44,13 @@ describe('decodeEvent', () => {
     const csv = toCsv([decodeEvent(pinged(), spec, 'testnet')]);
     expect(csv.split('\n')[0]).toBe('id,ledger,closed_at,tx_hash,successful,event,topics,data');
     expect(csv.split('\n')[1]).toContain('"[""pinged"",""' + G + '""]"');
+  });
+  it('toCsv quotes a cell containing a bare CR', () => {
+    // A raw \r inside a plain string field (unlike inside JSON.stringify'd topics/data, which
+    // escapes it to the two characters `\r`) is the case that specifically exercises the CR
+    // branch of the quoting regex, independent of the pre-existing quote-character trigger.
+    const ev: DecodedEvent = { id: 'a\rb', ledger: 1, closed_at: '2026-01-01T00:00:00Z', tx_hash: 'ab'.repeat(32), successful: true, event: null, topics: [], data: null, raw: { topic: [], value: '' }, explorer_url: '' };
+    const csv = toCsv([ev]);
+    expect(csv.split('\n')[1]).toContain('"a\rb"');
   });
 });

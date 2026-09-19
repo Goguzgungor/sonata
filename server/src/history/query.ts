@@ -24,11 +24,11 @@ export function normaliseQuery(raw: Record<string, unknown>, r: Retention): Norm
   const address = raw.address === undefined ? undefined : String(raw.address);
   if (address !== undefined && !StrKey.isValidEd25519PublicKey(address) && !StrKey.isValidContract(address)) throw badRequest('invalid_args', 'address must be a G… or C… address', { path: 'address' });
   const type = raw.type === undefined ? undefined : String(raw.type);
-  if (type !== undefined && !/^[A-Za-z_][A-Za-z0-9_]{0,31}$/.test(type)) throw badRequest('invalid_args', 'type must be an event name (symbol)', { path: 'type' });
+  if (type !== undefined && !/^[A-Za-z0-9_]{1,32}$/.test(type)) throw badRequest('invalid_args', 'type must be an event name (symbol)', { path: 'type' });
   const rawTo = raw.to === undefined ? r.latestLedger : toLedger(raw.to, 'to', r);
   const rawFrom = raw.from === undefined ? rawTo - DEFAULT_WINDOW_LEDGERS : toLedger(raw.from, 'from', r);
-  if (rawFrom > rawTo) throw badRequest('invalid_args', 'to must not be before from', { path: 'to' });
   if (rawTo < r.oldestLedger) throw rangeOutOfRetention(r.oldestLedger, r.latestLedger);
   const fromLedger = clamp(rawFrom, r.oldestLedger, r.latestLedger), toLedger_ = clamp(rawTo, r.oldestLedger, r.latestLedger);
+  if (fromLedger > toLedger_) throw badRequest('invalid_args', 'to must not be before from', { path: 'to' });
   return { type, address, fromLedger, toLedger: toLedger_, cursor: raw.cursor === undefined ? undefined : String(raw.cursor), limit, format };
 }
