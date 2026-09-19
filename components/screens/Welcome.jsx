@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSonataUI } from '@/lib/sonata';
 import { Label, CodeBox, CopyButton } from '@/components/ui';
@@ -49,14 +50,14 @@ export default function Welcome() {
   const mcp = `${mcpGlobalConfig}\n\n# or\n${mcpGlobalOneLiner}`;
   return (
     <main className="home">
-      {/* Hero: full-width staff score, then copy left + surfaces right */}
-      <section className="home-section home-section--hero">
-        <div className="hero-staff" aria-hidden="true">
-          <div className="hero-staff__wide"><S.StaffLines width={1200} height={200} /></div>
-          <div className="hero-staff__narrow"><S.StaffLines width={520} height={160} /></div>
-        </div>
-        <div className="hero">
+      {/* Hero: night scene — copy on the left, the painting bleeding off the right edge */}
+      <section className="home-section home-section--hero hero-scene">
+        <div className="hero hero--scene">
           <div className="hero__copy">
+            <div className="hero-staff" aria-hidden="true">
+              <div className="hero-staff__wide"><S.StaffLines width={620} height={104} /></div>
+              <div className="hero-staff__narrow"><S.StaffLines width={520} height={96} /></div>
+            </div>
             <h1 className="sn-display" style={{ fontSize: 'clamp(36px, 5.2vw, 64px)' }}>API and MCP layer for Stellar contracts.</h1>
             <p className="sn-body sn-muted" style={{ marginTop: 20, maxWidth: 520 }}>
               REST endpoints, an MCP server and AI-ready docs for any Soroban contract, in about thirty seconds. No backend, no SDK, no custody.
@@ -66,18 +67,29 @@ export default function Welcome() {
               <S.Button size="lg" variant="secondary" onClick={() => router.push('/explorer')}>Browse contracts</S.Button>
             </div>
             <div className="sn-small sn-muted" style={{ marginTop: 14 }}>Non-custodial · your wallet signs · Testnet &amp; Mainnet · <Link href="/docs">Read the docs</Link></div>
-          </div>
-          <div className="hero-rows">
-            {ROWS.map((w, i) => (
-              <div key={i} className="hero-row">
-                <S.Numeral index={i + 1} size="lg" />
-                <div>
-                  <div className="sn-h3">{w.name}</div>
-                  <div className="sn-body sn-muted" style={{ marginTop: 4 }}>{w.d}</div>
+            <div className="hero-rows">
+              {ROWS.map((w, i) => (
+                <div key={i} className="hero-row">
+                  <S.Numeral index={i + 1} size="lg" />
+                  <div>
+                    <div className="sn-h3">{w.name}</div>
+                    <div className="sn-body sn-muted" style={{ marginTop: 4 }}>{w.d}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+          <figure className="hero-art">
+            <Image
+              src="/hero-pianist.jpg"
+              alt=""
+              fill
+              priority
+              sizes="(max-width: 980px) 100vw, 46vw"
+              className="hero-art__img"
+            />
+            <span className="hero-art__blend" aria-hidden="true" />
+          </figure>
         </div>
       </section>
 

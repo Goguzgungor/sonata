@@ -211,3 +211,73 @@ img, svg { max-width: 100%; }
   .sn-stat-row > .sn-stat:nth-child(even) { padding-left: 0; border-left: none; }
   .actions > * { flex: 1 1 100%; }
 }
+
+/* ---- Home hero: night scene ----
+   The painting is dark and cool, so the hero re-declares the Sonata tokens for a
+   dark field. Every sn-* component inside (Button, Numeral, StaffLines) inverts
+   with them — no component overrides needed. Radius stays 0: this is the same
+   editorial language, lit from the other side. */
+.hero-scene {
+  --scene-rgb: 12, 30, 38;
+  --sn-ground: rgb(var(--scene-rgb));
+  --sn-paper: #143039;
+  --sn-ink: #F1EDE4;
+  --sn-ink-2: #A3BAC4;
+  --sn-hairline: rgba(241, 237, 228, 0.18);
+  --sn-accent: #F0802F;              /* the lamp in the painting, not the print orange */
+  --scene-pad-y: clamp(56px, 7vh, 88px);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--sn-ground);
+  color: var(--sn-ink);
+  padding-top: var(--scene-pad-y);
+  padding-bottom: var(--scene-pad-y);
+}
+.hero-scene a { color: var(--sn-ink); }
+.hero-scene a:hover { color: var(--sn-accent); }
+.hero--scene { grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr); gap: 56px; align-items: stretch; }
+.hero-scene .hero-staff { margin-bottom: 36px; }
+.hero-scene .hero-rows { margin-top: 48px; }
+
+/* Bleeds off the top and right edges, then dissolves into the night at the bottom.
+   Height is capped so the crop stays near the source's portrait ratio and the
+   pianist lands inside the first viewport instead of below the fold. */
+.hero-art {
+  position: relative;
+  align-self: start;
+  height: clamp(480px, 74vh, 760px);
+  margin: calc(-1 * var(--scene-pad-y)) calc(-1 * var(--pad)) 0 0;
+}
+.hero-art__img { object-fit: cover; object-position: 50% 94%; }
+/* Feather the painting into the night so no edge reads as a pasted-in photo.
+   The right-hand fade stays narrow: the copy sits in its own column, so this is
+   seam work, not a legibility scrim — it must not swallow the lamp or the figure. */
+.hero-art__blend {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, rgb(var(--scene-rgb)) 0%, rgba(var(--scene-rgb), 0.55) 7%, rgba(var(--scene-rgb), 0) 28%),
+    linear-gradient(to bottom, rgba(var(--scene-rgb), 0.45) 0%, rgba(var(--scene-rgb), 0) 20%, rgba(var(--scene-rgb), 0) 58%, rgb(var(--scene-rgb)) 100%);
+}
+
+@media (max-width: 980px) {
+  .hero--scene { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .hero-art {
+    order: -1;
+    height: auto;
+    margin: calc(-1 * var(--scene-pad-y)) calc(-1 * var(--pad)) 36px;
+    aspect-ratio: 16 / 11;
+  }
+  .hero-art__img { object-position: 50% 84%; }
+  .hero-art__blend {
+    background: linear-gradient(to bottom, rgba(var(--scene-rgb), 0.30) 0%, rgba(var(--scene-rgb), 0) 38%, rgba(var(--scene-rgb), 0) 68%, rgb(var(--scene-rgb)) 100%);
+  }
+  .hero-scene .hero-rows { margin-top: 36px; }
+}
+
+@media (max-width: 720px) {
+  .hero-art { aspect-ratio: 4 / 3; margin-bottom: 28px; }
+  .hero-scene .hero-staff { margin-bottom: 28px; }
+}
