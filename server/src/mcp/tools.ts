@@ -3,7 +3,7 @@ import type { contract } from '@stellar/stellar-sdk';
 import type { Deps } from '../http/deps.js';
 import type { ContractModel, McpScope } from '../types.js';
 import { shortId } from '../docs/llms.js';
-import { ok, failWith, sig, withSource, toolName, CALL_OUT, BUILD_OUT, TX_OUT, DOCS_OUT, simulate, buildTx, submitTx, searchFunctions, docsOf } from './handlers.js';
+import { ok, failWith, sig, withSource, toolName, CALL_OUT, BUILD_OUT, TX_OUT, DOCS_OUT, EVENTS_IN, EVENTS_OUT, EVENTS_DESC, simulate, buildTx, submitTx, searchFunctions, docsOf, getEvents } from './handlers.js';
 import type { Ready } from './handlers.js';
 
 export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope: McpScope, deps: Deps): McpServer {
@@ -39,6 +39,10 @@ export function buildMcpServer(model: ContractModel, spec: contract.Spec, scope:
   }
   server.registerTool('search_functions', { description: 'Find contract functions by name or purpose (case-insensitive substring on name/doc), sorted alphabetically.', inputSchema: fromJsonSchema<{ query: string }>({ type: 'object', properties: { query: { type: 'string' } }, required: ['query'] }) },
     async ({ query }) => ok({ functions: searchFunctions(model, query) }));
+  server.registerTool('get_events', { description: EVENTS_DESC, inputSchema: fromJsonSchema<Record<string, unknown>>(EVENTS_IN), outputSchema: fromJsonSchema(EVENTS_OUT) },
+    async (args) => {
+      try { return ok(await getEvents(deps, model.id, args)); } catch (e) { return fail(e); }
+    });
   server.registerTool('get_docs', { description: 'llms.txt for this contract: functions, types, errors, events and endpoints.', inputSchema: fromJsonSchema<Record<string, never>>({ type: 'object', properties: {} }), outputSchema: fromJsonSchema(DOCS_OUT) },
     async () => { const text = await docsOf(deps, model.id); return { content: [{ type: 'text' as const, text }], structuredContent: { text } }; });
   server.registerResource('llms.txt', `sonata://c/${model.id}/llms.txt`, { description: 'AI-ready contract docs', mimeType: 'text/markdown' },

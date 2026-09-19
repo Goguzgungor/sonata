@@ -14,7 +14,8 @@ POST https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 POST https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/tx/{fn}     build unsigned XDR → { xdr, fee, auth }
 POST https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/submit      relay a signed XDR → { hash, status }
 GET  https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/openapi.json
-MCP (all contracts): https://api.sonata.test/mcp — tools list_contracts, get_contract, call, build, submit
+GET  https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/events?type=&address=&from=&to=&limit=   decoded events, last ~7 days
+MCP (all contracts): https://api.sonata.test/mcp — tools list_contracts, get_contract, get_events, call, build, submit
 MCP (this contract): https://api.sonata.test/c/CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4/mcp
 
 Arguments are passed by name in \`args\`. Integers ≥ 64-bit are decimal strings, bytes are 0x-hex, maps are objects keyed by the map key, enums are integers, unions are "Name" for a void case or {tag, values} otherwise, tuples are arrays, and an Option is the value or null.

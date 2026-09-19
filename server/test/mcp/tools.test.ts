@@ -8,11 +8,18 @@ import { buildMcpServer } from '../../src/mcp/tools.js';
 import { ChainError } from '../../src/chain/errors.js';
 
 const G = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+const b64 = (v: xdr.ScVal) => v.toXDR('base64');
+const pingedRaw = () => ({
+  id: '0001-1', ledger: 150_000, closedAt: '2026-09-18T16:13:58Z', txHash: 'ab'.repeat(32), inSuccessfulContractCall: true,
+  topic: [xdr.ScVal.scvSymbol('pinged'), nativeToScVal(G, { type: 'address' })].map(b64),
+  value: b64(nativeToScVal({ n: 7 }, { type: { n: ['symbol', 'u32'] } }))
+});
+const RETENTION = { oldestLedger: 1000, latestLedger: 200_000, latestLedgerCloseTime: '2026-09-19T00:00:00.000Z' };
 
 async function connect(scope: 'ro' | 'rw') {
   const t = await testApp(); await t.registerFixture();
   const { model, spec } = await t.registry.ready(FIXTURE_ID);
-  const deps = { cfg: t.cfg, chain: t.chain, registry: t.registry, store: t.store, log: t.app.log as any };
+  const deps = { cfg: t.cfg, chain: t.chain, registry: t.registry, store: t.store, log: t.app.log as any, history: t.history };
   const server = buildMcpServer(model, spec, scope, deps);
   const [ct, st] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0' });
@@ -21,15 +28,18 @@ async function connect(scope: 'ro' | 'rw') {
 }
 
 describe('buildMcpServer', () => {
-  it('read-only lists call_* + search + docs only; rw adds build_* and submit', async () => {
+  it('read-only lists call_* + search + docs + events only; rw adds build_* and submit', async () => {
     const ro = await connect('ro');
     const names = (await ro.client.listTools()).tools.map((t) => t.name).sort();
     expect(names.filter((n) => n.startsWith('call_'))).toHaveLength(16);
-    expect(names).toContain('search_functions'); expect(names).toContain('get_docs');
+    expect(names).toContain('search_functions'); expect(names).toContain('get_docs'); expect(names).toContain('get_events');
     expect(names.some((n) => n.startsWith('build_'))).toBe(false); expect(names).not.toContain('submit_transaction');
+    expect(names).toHaveLength(16 + 3);
     const rw = await connect('rw');
     const rwNames = (await rw.client.listTools()).tools.map((t) => t.name);
     expect(rwNames.filter((n) => n.startsWith('build_'))).toHaveLength(16); expect(rwNames).toContain('submit_transaction');
+    expect(rwNames).toContain('get_events');
+    expect(rwNames).toHaveLength(16 * 2 + 4);
   });
   it('tool descriptions carry doc + signature, input schema is the args schema plus source', async () => {
     const { client } = await connect('ro');
@@ -80,5 +90,21 @@ describe('buildMcpServer', () => {
     const d = await client.callTool({ name: 'get_docs', arguments: {} });
     expect((d.content as any)[0].text).toMatch(/^# KitchenSink/);
     expect((d.structuredContent as any).text).toMatch(/^# KitchenSink/);
+  });
+  it('get_events returns decoded events through the fake history source', async () => {
+    const { client, historySource } = await connect('ro');
+    historySource.pages = [{ events: [pingedRaw()], cursor: null, ...RETENTION }];
+    const r = await client.callTool({ name: 'get_events', arguments: { type: 'Pinged', limit: 5 } });
+    expect(r.isError).toBeFalsy();
+    expect((r.structuredContent as any).events[0]).toMatchObject({ event: 'pinged', data: { n: 7 } });
+    const sym = xdr.ScVal.scvSymbol('pinged').toXDR('base64');
+    expect(historySource.calls[0].topics).toEqual([[sym, '*']]);
+    expect(historySource.calls[0].limit).toBe(5);
+  });
+  it('get_events with limit: 0 is isError invalid_args', async () => {
+    const { client } = await connect('ro');
+    const r = await client.callTool({ name: 'get_events', arguments: { limit: 0 } });
+    expect(r.isError).toBe(true);
+    expect((r.content as any)[0].text).toContain('invalid_args');
   });
 });

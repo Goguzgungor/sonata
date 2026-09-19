@@ -25,6 +25,17 @@ export const CALL_OUT: JsonSchema = { type: 'object', properties: { result: {}, 
 export const BUILD_OUT: JsonSchema = { type: 'object', properties: { xdr: { type: 'string' }, fee: { type: 'string' }, auth: { type: 'array', items: { type: 'string' } }, ledger: { type: 'integer' }, expires_at: { type: 'string' } }, required: ['xdr'] };
 export const TX_OUT: JsonSchema = { type: 'object', properties: { hash: { type: 'string' }, status: { type: 'string' }, ledger: { type: 'integer' }, fee_charged: { type: 'string' }, return_value: { type: 'string', description: 'Returned ScVal (base64), on success only' }, result_xdr: { type: 'string', description: 'TransactionResult (base64)' } }, required: ['hash', 'status'] };
 export const DOCS_OUT: JsonSchema = { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] };
+/**
+ * `limit` deliberately has no `minimum`/`maximum` here even though the range is 1–200: the MCP SDK
+ * validates tool arguments against this schema BEFORE the handler runs, so a bound here would reject
+ * an out-of-range `limit` as a transport-level ProtocolError (a generic "Input validation error"
+ * string), not the `invalid_args` ApiError envelope every other error uses. The real 1–200 check
+ * lives once, in history/query.ts's normaliseQuery (shared with the REST route) — same pattern as
+ * checkBuildOpts's fee/timeout_s validation (review finding I1).
+ */
+export const EVENTS_IN: JsonSchema = { type: 'object', properties: { type: { type: 'string', description: 'event name (declared name or on-chain symbol)' }, address: { type: 'string', description: 'G… or C… address appearing in topics or data' }, from: { type: 'string', description: 'ledger sequence or ISO-8601 time' }, to: { type: 'string', description: 'ledger sequence or ISO-8601 time' }, cursor: { type: 'string' }, limit: { type: 'integer' } } };
+export const EVENTS_OUT: JsonSchema = { type: 'object', properties: { events: { type: 'array', items: { type: 'object' } }, page: { type: 'object' }, retention: { type: 'object' } }, required: ['events', 'page', 'retention'] };
+export const EVENTS_DESC = 'Decoded contract events from the network RPC (last ~7 days). Filters: type (event name), address (in topics/data), from/to (ledger or ISO time), cursor, limit ≤ 200.';
 
 /** A bad `source` must come back as an invalid_args envelope, not a 500/502 from deeper in (review finding I2). */
 export function checkSource(s: unknown, required: boolean) {
@@ -85,3 +96,4 @@ export const searchFunctions = (model: ContractModel, query: string) => {
   return model.functions.filter((f) => f.name.toLowerCase().includes(q) || f.doc.toLowerCase().includes(q)).map((f) => ({ name: f.name, signature: sig(f), doc: f.doc, kind: f.kind })).sort((a, b) => a.name.localeCompare(b.name));
 };
 export const docsOf = async (deps: Deps, id: string) => (await deps.registry.ready(id)).row.llmsTxt ?? '';
+export const getEvents = (deps: Deps, id: string, args: Record<string, unknown>) => deps.history.query(id, args);

@@ -35,7 +35,7 @@ Base URL `PUBLIC_BASE_URL` (prod: `https://api.sonata.brages.uk`). JSON everywhe
 | `GET /tx/:hash?network=` | Poll a submit | same shape |
 | `GET /c/:id/llms.txt` | AI docs | `text/markdown` |
 | `GET /c/:id/openapi.json` | Per-contract OpenAPI 3.1 | JSON |
-| `GET /c/:id/events` | History | `501 {error: 'not_indexed'}` |
+| `GET /c/:id/events` `?type&address&from&to&cursor&limit&format` | Decoded events from the network RPC (last ~7 days) | `200 {events: [{id, ledger, closed_at, tx_hash, successful, event, topics, data, raw, explorer_url}], page: {cursor, limit, from_ledger, to_ledger}, retention: {oldest_ledger, latest_ledger, latest_ledger_close_time, note}}` — `format=csv` streams CSV |
 | `GET /healthz` | Liveness | `200 {db: 'ok', networks: {testnet: 'ok'}}` |
 | `ALL /mcp` | Global MCP (all contracts) | Streamable HTTP |
 
@@ -46,6 +46,8 @@ Base URL `PUBLIC_BASE_URL` (prod: `https://api.sonata.brages.uk`). JSON everywhe
 The `auth_secret` (JWT signing key) and `auth_signing_seed` (SEP-10 challenge signer) are self-generated on first boot and persisted in the `settings` table via an insert-only write, so multiple instances cold-booting at once converge on the same pair instead of each minting its own. The signed-challenge replay guard (`ChallengeVerifier`'s `used` set in `src/auth/challenge.ts`), however, is an in-memory `Map` kept per process, not shared through the store. With a single instance a signed challenge can be redeemed for a token exactly once; with more than one instance behind a load balancer, a leaked signed challenge could be replayed once per instance until that replay set moves to a shared store (Postgres or Redis) — worth keeping in mind before scaling this service horizontally.
 
 `healthz` is a liveness probe for this process: it answers `503` only when the database does not answer a `select 1`. `networks` lists just the configured networks (`ok`/`error` per network, an unconfigured one omitted entirely) — a degraded RPC is reported there but still answers `200`, so the platform does not recycle an otherwise healthy instance.
+
+**History.** Events are read on demand from the network RPC's `getEvents` — nothing is stored. The window is whatever the RPC retains (~7 days on public nodes), exposed per-request in `retention`. `from`/`to` accept a ledger sequence or an ISO-8601 time and are clamped to the retained window. `type` matches the declared event name (`Pinged`) or the on-chain symbol (`pinged`), case-insensitively. `address` is matched after decoding, within the fetched page — so a page can come back with fewer than `limit` rows and a `cursor` to keep paging. Asking for a range entirely older than the window is `400 range_out_of_retention` with `details.oldest_ledger`/`latest_ledger`.
 
 ## MCP
 
@@ -65,6 +67,7 @@ claude mcp add --transport http sonata https://api.sonata.brages.uk/mcp
 | `get_contract` | `{ id }` | `{ id, name, network, sac, mcp_scope, owner, functions: [{ name, signature, doc, kind, input_schema }], types, errors, events, urls }` | The public row minus pipeline steps, with `input_schema` = the function's JSON schema (the same one `call`/`build` validate against) |
 | `search_functions` | `{ id, query }` | `{ functions: [{ name, signature, doc, kind }] }` | Same semantics as the per-contract tool |
 | `get_docs` | `{ id }` | `{ text }` | llms.txt |
+| `get_events` | `{ id, type?, address?, from?, to?, cursor?, limit? }` | `{ events, page, retention }` | Same filters and shape as `GET /c/:id/events` (JSON only; no `format`) |
 | `call` | `{ id, fn, args?, source? }` | `{ result, simulated: true, latency_ms, ledger, auth }` | Simulation; `source` optional (defaults to the configured sim account); learns read/write hints exactly like REST |
 | `build` | `{ id, fn, args?, source, fee?, timeout_s? }` | `{ xdr, fee, auth, ledger, expires_at }` | **Only if the contract's `mcp_scope` is `rw`**; otherwise `isError` `{ error: 'write_tools_disabled', message: 'the owner of <id> has not enabled write tools; ask them to switch the MCP scope to read + write' }` |
 | `submit` | `{ id, xdr }` | `{ hash, status, ledger?, fee_charged?, return_value?, result_xdr? }` | Same `rw` gate; waits ≤ 30 s. `id` selects the network and the write gate; the envelope itself is any signed transaction on that network. |
@@ -79,6 +82,8 @@ Each registered contract also exposes its own scoped MCP server:
 ```bash
 claude mcp add --transport http sonata-<name> https://api.sonata.brages.uk/c/<id>/mcp
 ```
+
+It exposes `call_<fn>` for every function (`build_<fn>` and `submit_transaction` too, in `rw` scope), plus `search_functions`, `get_docs` and `get_events` (same input as the global tool, minus `id`) in both scopes.
 
 ## Tests
 
@@ -134,6 +139,13 @@ server/
     docs/
       llms.ts                 llmsTxt(model, cfg)
       openapi.ts              openapi(model, cfg)
+    history/
+      types.ts                HistorySource interface + EventQuery/EventPage/RawEvent/Retention
+      rpc.ts                  RpcHistorySource: HistorySource over the network RPC's getEvents
+      query.ts                normaliseQuery(raw, retention): type/address/from/to/cursor/limit, clamped to the window
+      decode.ts               decodeEvent(raw, spec, network) via the SDK's SEP-48 event API; topic filters; address matching
+      csv.ts                  toCsv(events) for ?format=csv
+      service.ts              HistoryService: registryReady → normaliseQuery → source.events → decodeEvent, with a small LRU cache
     auth/
       challenge.ts            SEP-10-style challenge build + verify
       jwt.ts                  session token issue/verify
@@ -143,7 +155,7 @@ server/
       routes/auth.ts          /auth/challenge, /auth/token, /auth/me
       routes/contracts.ts     POST/GET /contracts, GET /c/:id, /status, PATCH
       routes/invoke.ts        /call, /tx, /submit, /tx/:hash
-      routes/docs.ts          /llms.txt, /openapi.json, /events (501)
+      routes/docs.ts          /llms.txt, /openapi.json, /events
       routes/health.ts        /healthz
     mcp/
       handlers.ts             shared tool logic (simulate, buildTx, submitTx, …) used by both MCP servers
@@ -155,6 +167,7 @@ server/
   test/
     fixtures/kitchen-sink/    Cargo.toml, src/lib.rs, kitchen_sink.wasm
     helpers/fakeChain.ts      scripted Chain for route + mcp tests
-    spec/*.test.ts  chain/*.test.ts  registry/*.test.ts  docs/*.test.ts  http/*.test.ts  mcp/*.test.ts
+    helpers/fakeHistory.ts    scripted HistorySource for route + mcp tests
+    spec/*.test.ts  chain/*.test.ts  registry/*.test.ts  docs/*.test.ts  http/*.test.ts  mcp/*.test.ts  history/*.test.ts
     e2e/flow.test.ts          testnet
 ```

@@ -21,6 +21,7 @@ if (existsSync('.env.test')) for (const l of readFileSync('.env.test', 'utf8').s
 const ID = process.env.E2E_CONTRACT_ID ?? ''; const SECRET = process.env.E2E_SECRET_KEY ?? '';
 
 let app: ReturnType<typeof buildApp>, base: string, kp: Keypair, G: string, token: string, registry: Registry;
+let pingHash: string, pingLedger: number;
 const setUp = async () => {
   kp = Keypair.fromSecret(SECRET); G = kp.publicKey();
   const cfg = loadConfig({ DATABASE_URL: 'postgres://unused', PUBLIC_BASE_URL: 'http://127.0.0.1' });
@@ -72,7 +73,33 @@ describe.skipIf(!ID || !SECRET)('e2e on testnet', () => {
     const sub = await post(`/c/${ID}/submit`, { xdr: tx.toXDR() });
     expect(sub.json(), sub.body).toMatchObject({ status: 'success' });
     expect(sub.json().ledger).toBeGreaterThan(0);
+    pingHash = sub.json().hash; pingLedger = sub.json().ledger;
   }, 90_000);
+  it('GET /c/:id/events returns the Pinged event just submitted; MCP get_events agrees', async () => {
+    let found: any;
+    for (let i = 0; i < 24 && !found; i++) {
+      const res = await app.inject({ method: 'GET', url: `/c/${ID}/events?type=Pinged&from=${pingLedger - 50}&limit=50` });
+      expect(res.statusCode, res.body).toBe(200);
+      found = res.json().events.find((e: any) => e.tx_hash === pingHash);
+      if (!found) await new Promise((r) => setTimeout(r, 5000));   // RPC event indexing can lag well behind submit on this network
+    }
+    expect(found, 'Pinged event not found in RPC history after polling').toBeTruthy();
+    expect(found).toMatchObject({ event: 'pinged', successful: true, data: { who: G, n: 1 } });
+    expect(found.explorer_url).toContain('/testnet/tx/');
+
+    const csv = await app.inject({ method: 'GET', url: `/c/${ID}/events?format=csv` });
+    expect(csv.statusCode, csv.body).toBe(200);
+    expect(csv.headers['content-type']).toMatch(/text\/csv/);
+    expect(csv.body.split('\n')[0]).toBe('id,ledger,closed_at,tx_hash,successful,event,topics,data');
+
+    const client = new Client({ name: 'e2e', version: '0' });
+    await client.connect(new StreamableHTTPClientTransport(new URL(`${base}/c/${ID}/mcp`)));
+    const r = await client.callTool({ name: 'get_events', arguments: { type: 'pinged', from: String(pingLedger - 50) } });
+    expect(r.isError, JSON.stringify(r)).toBeFalsy();
+    const mcpEvents = (r.structuredContent as any).events as Array<{ tx_hash: string }>;
+    expect(mcpEvents.some((e) => e.tx_hash === pingHash)).toBe(true);
+    await client.close();
+  }, 150_000);
   it('MCP: call and build over Streamable HTTP', async () => {
     await app.inject({ method: 'PATCH', url: `/c/${ID}`, payload: { mcp_scope: 'rw' }, headers: { authorization: `Bearer ${token}` } });
     const client = new Client({ name: 'e2e', version: '0' });

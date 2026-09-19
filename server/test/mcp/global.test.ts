@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
-import { nativeToScVal } from '@stellar/stellar-sdk';
+import { nativeToScVal, xdr } from '@stellar/stellar-sdk';
 import { testApp } from '../helpers/app.js';
 import { FIXTURE_ID } from '../fixtures/index.js';
 import { buildGlobalMcpServer } from '../../src/mcp/global.js';
@@ -9,10 +9,17 @@ import { buildGlobalMcpServer } from '../../src/mcp/global.js';
 const G = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
 const OTHER = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
 const text = (r: any) => JSON.parse(r.content[0].text);
+const b64 = (v: xdr.ScVal) => v.toXDR('base64');
+const pingedRaw = () => ({
+  id: '0001-1', ledger: 150_000, closedAt: '2026-09-18T16:13:58Z', txHash: 'ab'.repeat(32), inSuccessfulContractCall: true,
+  topic: [xdr.ScVal.scvSymbol('pinged'), nativeToScVal(G, { type: 'address' })].map(b64),
+  value: b64(nativeToScVal({ n: 7 }, { type: { n: ['symbol', 'u32'] } }))
+});
+const RETENTION = { oldestLedger: 1000, latestLedger: 200_000, latestLedgerCloseTime: '2026-09-19T00:00:00.000Z' };
 
 async function connect() {
   const t = await testApp(); await t.registerFixture();
-  const deps = { cfg: t.cfg, chain: t.chain, registry: t.registry, store: t.store, log: t.app.log as any, auth: t.auth };
+  const deps = { cfg: t.cfg, chain: t.chain, registry: t.registry, store: t.store, log: t.app.log as any, auth: t.auth, history: t.history };
   const server = buildGlobalMcpServer(deps);
   const [ct, st] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0' });
@@ -21,9 +28,9 @@ async function connect() {
 }
 
 describe('global MCP server', () => {
-  it('exposes exactly the eight generic tools and two resources', async () => {
+  it('exposes exactly the nine generic tools and two resources', async () => {
     const { client } = await connect();
-    expect((await client.listTools()).tools.map((t) => t.name).sort()).toEqual(['build', 'call', 'get_contract', 'get_docs', 'get_tx', 'list_contracts', 'search_functions', 'submit']);
+    expect((await client.listTools()).tools.map((t) => t.name).sort()).toEqual(['build', 'call', 'get_contract', 'get_docs', 'get_events', 'get_tx', 'list_contracts', 'search_functions', 'submit']);
     const res = await client.listResources();
     expect(res.resources.map((r) => r.uri)).toContain('sonata://contracts');
     expect(res.resources.map((r) => r.uri)).toContain(`sonata://c/${FIXTURE_ID}/llms.txt`);
@@ -58,6 +65,15 @@ describe('global MCP server', () => {
     const d = await client.callTool({ name: 'get_docs', arguments: { id: FIXTURE_ID } });
     expect((d.content as any)[0].text).toMatch(/^# KitchenSink/);
     const nope = await client.callTool({ name: 'get_contract', arguments: { id: 'CNOPE' } });
+    expect(nope.isError).toBe(true); expect(text(nope)).toMatchObject({ error: 'contract_not_found' });
+  });
+  it('get_events returns decoded events through the fake history source; unknown id is contract_not_found', async () => {
+    const { client, historySource } = await connect();
+    historySource.pages = [{ events: [pingedRaw()], cursor: null, ...RETENTION }];
+    const r = await client.callTool({ name: 'get_events', arguments: { id: FIXTURE_ID, limit: 5 } });
+    expect(r.isError).toBeFalsy();
+    expect((r.structuredContent as any).events[0]).toMatchObject({ event: 'pinged', data: { n: 7 } });
+    const nope = await client.callTool({ name: 'get_events', arguments: { id: 'CNOPE', limit: 5 } });
     expect(nope.isError).toBe(true); expect(text(nope)).toMatchObject({ error: 'contract_not_found' });
   });
   it('call simulates with the shared codec and errors like REST', async () => {
