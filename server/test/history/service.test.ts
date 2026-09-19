@@ -46,6 +46,21 @@ describe('HistoryService', () => {
     expect(source.calls).toHaveLength(2);
   });
 
+  it('evicts the oldest cache entry once entries exceed max', async () => {
+    const source = new FakeHistorySource();
+    const empty = { events: [], cursor: null, ...RETENTION };
+    source.pages = [empty, empty, empty, empty];
+    const svc = new HistoryService(source, ready, { ttlMs: 10_000, max: 2 });
+    await svc.query(FIXTURE_ID, { limit: 10 });
+    await svc.query(FIXTURE_ID, { limit: 20 });
+    await svc.query(FIXTURE_ID, { limit: 30 });
+    expect(source.calls).toHaveLength(3);
+    await svc.query(FIXTURE_ID, { limit: 10 });   // first key was evicted past max:2 -> source hit again
+    expect(source.calls).toHaveLength(4);
+    await svc.query(FIXTURE_ID, { limit: 30 });   // still the most-recently-used entry -> no new call
+    expect(source.calls).toHaveLength(4);
+  });
+
   it('clamps the requested range to retention and reports the clamp in page.from_ledger/to_ledger', async () => {
     const source = new FakeHistorySource();
     source.pages = [{ events: [], cursor: null, ...RETENTION }];

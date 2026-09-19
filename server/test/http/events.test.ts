@@ -55,6 +55,16 @@ describe('GET /c/:id/events', () => {
     expect(res.json()).toMatchObject({ error: 'invalid_args', details: { path: 'limit' } });
   });
 
+  it('?format=csv&limit=0 still errors as JSON, with no CSV content-disposition leaked onto the error response', async () => {
+    const { app, registerFixture } = await testApp();
+    await registerFixture();
+    const res = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/events?format=csv&limit=0` });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: 'invalid_args' });
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.headers['content-disposition']).toBeUndefined();
+  });
+
   it('unknown contract is 404', async () => {
     const { app } = await testApp();
     const res = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/events` });
