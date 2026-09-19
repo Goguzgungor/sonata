@@ -31,7 +31,7 @@ export default function Overview({ S, contract: c, id }) {
                 style={{ display: 'grid', gridTemplateColumns: '48px minmax(0, 1fr) 24px', gap: '0 16px', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid var(--sn-hairline)' }}>
                 <S.Numeral index={i + 1} />
                 <div>
-                  <div className="sn-body" style={{ fontWeight: 700 }}>{s.name}{s.soon && <> <S.Chip tone="neutral">soon</S.Chip></>}</div>
+                  <div className="sn-body" style={{ fontWeight: 700 }}>{s.name}</div>
                   <div className="sn-mono" style={{ color: 'var(--sn-ink-2)', marginTop: 3 }}>{s.d}</div>
                 </div>
                 <div className="sn-mono" style={{ fontSize: 16 }}>→</div>

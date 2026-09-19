@@ -35,7 +35,7 @@ interface HistorySource { name: string; retention(network): Promise<{ oldestLedg
 ```
 
 - `event`: decoded `topic[0]` when it is a symbol/string, else `null`; `topics`: every topic decoded with the generic ScVal→JSON decoder (addresses become strings).
-- `data`: if the contract's spec declares an event with that name, the decoded value is **named** — a tuple/vector maps positionally onto the non-topic params, a single value onto the single remaining param, a map is passed through; otherwise `data` is the plain decoded value. Decoding never throws: on failure `data` is `null` and `raw` is always present.
+- `data`: if the contract's spec declares a matching event, `data` is the SDK's SEP-48 `Spec.parseEvent` result — **every** declared param, topic-list and data alike, decoded and merged by name into one object (where a param was carried no longer matters once parsed); otherwise `data` is the plain decoded value. Decoding never throws: on failure `data` is `null` and `raw` is always present.
 - Explorer link: `explorer_url` = `https://stellar.expert/explorer/{public|testnet}/tx/<tx_hash>`.
 
 ## 5. REST
@@ -44,26 +44,26 @@ interface HistorySource { name: string; retention(network): Promise<{ oldestLedg
 
 | Query | Meaning |
 |---|---|
-| `type` | event name; becomes a `topics` filter `[[<symbol xdr>, '*', '*', '*']]` on topic[0] |
+| `type` | event name, its prefix topic, or an arbitrary on-chain symbol; resolved to a symbol (the declared event's first prefix topic, case-insensitively, when `type` matches one; otherwise `type` itself) and turned into `topics` filters covering **all four** topic-count arities (1–4) for that symbol — a declared event's topic list can be shorter than what the contract actually emits (e.g. the built-in SAC's `Transfer` declares 3 topics but on-chain SAC transfer/approve events carry a 4th), so an exact-arity filter built from the spec alone would silently miss those |
 | `address` | G…/C… address; if it appears in the decoded topics or data the event matches; applied **after** decoding within the fetched page (documented: only the fetched window is scanned) |
-| `from`, `to` | ledger sequence (integer) **or** ISO-8601 time; times are converted to ledgers with `latestLedger` and the ~5.3 s average close time (`Math.floor`), clamped to the retention window; defaults: `to` = latest, `from` = max(oldest, latest − 17 280 ≈ 24 h) |
-| `cursor` | opaque, from the previous page |
+| `from`, `to` | ledger sequence (integer) **or** ISO-8601 time; times are converted to ledgers with `latestLedger` and the ~5.5 s average close time (`Math.round`), clamped to the retention window; defaults: `to` = latest, `from` = max(oldest, latest − 17 280 ≈ 24 h) |
+| `cursor` | opaque, from the previous page; forced to `null` once the kept page reaches or passes `to`, or returns fewer than `limit` events — the RPC's own cursor still advances in both cases, which would otherwise offer a "Load more" whose only effect is an empty fetch |
 | `limit` | 1–200, default 50 (RPC is called with the same limit; post-filters may return fewer rows — `next` cursor still advances) |
 | `format` | `json` (default) or `csv` (`text/csv`, columns `id,ledger,closed_at,tx_hash,successful,event,topics,data`; `topics`/`data` JSON-encoded) |
 
-Response `200 { events: [...], page: { cursor, limit, from_ledger, to_ledger }, retention: { oldest_ledger, latest_ledger, latest_ledger_close_time, note: 'RPC history covers the last ~7 days' } }`. Errors: `404 contract_not_found`, `409 contract_not_ready`, `400 invalid_args` (bad type/address/range/limit), `400 range_out_of_retention`, `502 rpc_unavailable`. Rate limit: the default 120/min. Cache: an in-process LRU keyed by the full RPC query (id, network, startLedger, endLedger, topics, cursor, limit) with a **10 s TTL**, so the site's polling and an agent's retries don't hammer the free RPC.
+Response `200 { events: [...], page: { cursor, limit, from_ledger, to_ledger }, retention: { oldest_ledger, latest_ledger, latest_ledger_close_time, note: 'RPC history covers the last ~7 days' } }`. Errors: `404 contract_not_found`, `409 contract_not_ready`, `400 invalid_args` (bad type/address/range/limit/cursor), `400 range_out_of_retention`, `502 rpc_unavailable`. Rate limit: the default 120/min. Cache: a 100-entry in-process LRU keyed by the full RPC query (id, network, startLedger, endLedger, topics, cursor, limit) with a **10 s TTL** (expired entries are swept on insert, not just evicted by size); identical in-flight queries single-flight onto one RPC call; together these keep the site's polling and an agent's retries from hammering the free RPC.
 
 ## 6. MCP
 
 - Per-contract server (`/c/:id/mcp`): tool `get_events({ type?, address?, from?, to?, cursor?, limit? })` → the REST body (structured + text). Counted in the tool totals (`N+3` ro / `2N+4` rw — the site's `mcpToolCount` and the tests that assert `Tools · N enabled` move with it).
 - Global server (`/mcp`): tool `get_events({ id, …same })`. Both go through one handler in `mcp/handlers.ts`.
-- llms.txt: the Endpoints block gains `GET ${base}/events?type=&address=&from=&to=&limit= (decoded events, last ~7 days)`; the "## Events" section already lists declared events.
+- llms.txt: the Endpoints block gains `GET ${base}/events?type=&address=&from=&to=&cursor=&limit=&format= (decoded events, last ~7 days)`; the "## Events" section already lists declared events.
 
 ## 7. Site — History tab (live)
 
-- Filters: event type (`Segmented`: All + the contract's declared event names; free text if the spec declares none), address (`Field`), range (`From`/`To` ISO datetime-local inputs, default last 24 h), `Load more` (cursor).
+- Filters: event type (`Segmented`: All + the contract's declared event names, immediate; free text if the spec declares none), address (`Field`), range (`From`/`To` datetime-local inputs, left blank by default — the server applies the last ~24 h window when they're omitted), `Load more` (cursor). The free-text type, address and both date inputs are debounced (~400 ms) before joining the query, and address additionally only joins once it matches the G…/C… shape (a quiet hint shows otherwise) — a single browser tab typing a filter by hand must not fan out an RPC call per keystroke.
 - Table (ResponsiveTable): Time (`relTime` + exact on hover), Event, Decoded (`name(param=value, …)` compact string; expandable raw JSON), Ledger, Tx (short hash linking to Stellar Expert), Status chip (success/failed call).
-- Stats tiles are honest and window-scoped: `Events (loaded)`, `Event types`, `Unique addresses (in loaded rows)`, and the window label; no volume tile (needs token semantics).
+- Stats tiles are honest and window-scoped: `Events (loaded)`, `Event types`, `Unique addresses (in loaded rows)`; no window-label tile (the page's `from_ledger`–`to_ledger` isn't rendered) and no volume tile (needs token semantics).
 - Export: `Download CSV` (uses `format=csv` for the current filters, first page up to `limit=200`) and `Download JSON` (loaded rows).
 - A banner line: `History comes from the network's RPC and covers the last ~7 days (ledgers <oldest>–<latest>).` Empty state: `No events in this window.` with a hint to widen the range.
 - Overview: the History row becomes live (`decoded events · last 7 days`), no `soon` chip.

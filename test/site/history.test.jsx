@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
 vi.mock('@/lib/sonata', () => ({ useSonataUI: () => null, copyText: vi.fn(), download: vi.fn() }));
 vi.mock('@/lib/api', async (importOriginal) => {
   const m = await importOriginal();
@@ -152,5 +152,24 @@ describe('History tab', () => {
     render(<History S={S} contract={contract} id={contract.id} />);
     await waitFor(() => expect(screen.getByText('from is before the retention window')).toBeTruthy());
     expect(screen.getByText(/Try a range inside the retention window\./)).toBeTruthy();
+  });
+
+  it('typing a partial address sends no request and shows a hint, not a query per keystroke (review finding I5)', async () => {
+    contracts.events.mockResolvedValue(page1);
+    render(<History S={S} contract={contract} id={contract.id} />);
+    await waitFor(() => expect(contracts.events).toHaveBeenCalledTimes(1));
+
+    // A partial address (not yet 56 chars) never joins the query, even after the debounce window.
+    fireEvent.change(screen.getByLabelText('Address'), { target: { value: 'GABCDEF' } });
+    await waitFor(() => expect(screen.getByText('Enter a full G… or C… address')).toBeTruthy());
+    await act(async () => { await new Promise((r) => setTimeout(r, 500)); });
+    expect(contracts.events).toHaveBeenCalledTimes(1); // still just the initial load — no request for the partial address
+
+    // Completing the address to a valid, full-length G… key joins the query once the debounce settles.
+    const fullAddress = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+    fireEvent.change(screen.getByLabelText('Address'), { target: { value: fullAddress } });
+    await waitFor(() => expect(contracts.events).toHaveBeenCalledTimes(2));
+    const [, params] = contracts.events.mock.calls[1];
+    expect(params.address).toBe(fullAddress);
   });
 });

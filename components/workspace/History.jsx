@@ -1,11 +1,14 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { contracts, relTime } from '@/lib/api';
 import { useApi } from '@/lib/useApi';
+import { useDebounced } from '@/lib/useDebounced';
 import { download } from '@/lib/sonata';
 import { CodeBox, ResponsiveTable } from '@/components/ui';
 
 const ADDR_RE = /^[GC][A-Z2-7]{55}$/;
+const TYPE_RE = /^[A-Za-z0-9_]{1,32}$/;   // same symbol shape the server's normaliseQuery accepts
+const DEBOUNCE_MS = 400;
 const BAD_TONE = { color: 'var(--sn-bad, #b00)' };
 
 /** Distinct G…/C… strings found anywhere inside a decoded value, recursively. */
@@ -47,27 +50,47 @@ export default function History({ S, contract: c, id }) {
   const [expanded, setExpanded] = useState(() => new Set());
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreErr, setMoreErr] = useState(null);
-  const gen = useRef(0);         // bumped whenever the filter set produces a fresh first page; loadMore ignores a response from a stale generation
+  const gen = useRef(0);         // bumped (in an effect, not during render — see below) whenever the filter set produces a fresh first page; loadMore ignores a response from a stale generation
   const moreCtrl = useRef(null); // AbortController for an in-flight "Load more" request
 
+  // Free-text / date inputs are debounced before joining the query, and address/type are further
+  // gated by validity, so a partial value in progress never fires a live RPC round trip per keystroke
+  // (review finding I5). The Segmented control (declared events) bypasses all of this — `type` there
+  // changes only on a click, not a keystroke, so it stays immediate.
+  const debouncedAddress = useDebounced(address, DEBOUNCE_MS);
+  const debouncedType = useDebounced(type, DEBOUNCE_MS);
+  const debouncedFrom = useDebounced(from, DEBOUNCE_MS);
+  const debouncedTo = useDebounced(to, DEBOUNCE_MS);
+
+  const addressTrimmed = debouncedAddress.trim();
+  const addressIncomplete = address.trim() !== '' && !ADDR_RE.test(address.trim());
+  const effectiveAddress = ADDR_RE.test(addressTrimmed) ? addressTrimmed : undefined;
+  const effectiveType = declared.length > 0
+    ? (type && type !== 'all' ? type : undefined)
+    : (TYPE_RE.test(debouncedType) ? debouncedType : undefined);
+  const typeDep = declared.length > 0 ? type : debouncedType;   // Segmented path keys off `type` directly (immediate); free-text keys off the debounced value
+
   const filters = () => ({
-    type: type && type !== 'all' ? type : undefined,
-    address: address.trim() || undefined,
-    from: from ? new Date(from).toISOString() : undefined,
-    to: to ? new Date(to).toISOString() : undefined
+    type: effectiveType,
+    address: effectiveAddress,
+    from: debouncedFrom ? new Date(debouncedFrom).toISOString() : undefined,
+    to: debouncedTo ? new Date(debouncedTo).toISOString() : undefined
   });
 
   const { data, error, loading } = useApi(
     (signal) => contracts.events(id, { ...filters(), limit: 50 }, { signal }),
-    [id, type, address, from, to]
+    [id, typeDep, effectiveAddress, debouncedFrom, debouncedTo]
   );
 
   // A fresh first page (new data reference, from the filters changing or a refetch) resets the
   // accumulated rows and invalidates any in-flight "Load more" for the previous filter set.
   // Adjusted during render (not a useEffect) so the retention banner — which reads `data`
-  // directly — never paints a frame ahead of `list`.
+  // directly — never paints a frame ahead of `list`. `gen` itself is bumped separately below, in a
+  // layout effect keyed on `data`, so nothing mutates a ref during render (review finding M7); a
+  // layout effect (not a passive one) still runs synchronously in the same commit, before the browser
+  // can paint or any pending network response's microtask can run, so loadMore's staleness check
+  // below never observes a commit whose gen bump hasn't landed yet.
   if (data !== seenData) {
-    gen.current += 1;
     setSeenData(data);
     setList(data ? data.events : []);
     setCursor(data ? data.page.cursor : null);
@@ -75,9 +98,10 @@ export default function History({ S, contract: c, id }) {
     setMoreErr(null);
     setLoadingMore(false);
   }
+  useLayoutEffect(() => { gen.current += 1; }, [data]);
 
   // Cancels an in-flight "Load more" request when the filters change again or the tab unmounts.
-  useEffect(() => () => moreCtrl.current?.abort(), [id, type, address, from, to]);
+  useEffect(() => () => moreCtrl.current?.abort(), [id, typeDep, effectiveAddress, debouncedFrom, debouncedTo]);
 
   const stats = useMemo(() => {
     const types = new Set(); const addrs = new Set();
@@ -145,7 +169,10 @@ export default function History({ S, contract: c, id }) {
         ) : (
           <S.Field label="Type" hint="event name or symbol · optional" value={type} onChange={(e) => setType(e.target.value)} />
         )}
-        <S.Field className="filters__addr" label="Address" hint="G… or C… · optional" value={address} onChange={(e) => setAddress(e.target.value)} />
+        <div className="filters__addr">
+          <S.Field label="Address" hint="G… or C… · optional" value={address} onChange={(e) => setAddress(e.target.value)} />
+          {addressIncomplete && <div className="sn-small sn-muted" style={{ marginTop: 4 }}>Enter a full G… or C… address</div>}
+        </div>
         <div className="filters__dates">
           <S.Field className="filters__date" label="From" type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} />
           <S.Field className="filters__date" label="To" type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} />
