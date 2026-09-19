@@ -12,7 +12,7 @@ export default function Overview({ S, contract: c, id }) {
     { name: 'REST API', d: `${fns} functions · /call · /tx`, href: `/c/${id}/functions` },
     { name: 'MCP server', d: `${mcpToolCount(c)} tools · ${rw ? 'read + write' : 'read-only by default'}`, href: `/c/${id}/mcp` },
     { name: 'Docs', d: 'llms.txt · OpenAPI 3.1', href: `/c/${id}/docs` },
-    { name: 'History', d: 'coming soon · decoded events and calls', href: `/c/${id}/history`, soon: true }
+    { name: 'History', d: 'decoded events · last ~7 days · CSV export', href: `/c/${id}/history` }
   ];
   return (
     <>

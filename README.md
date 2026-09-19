@@ -26,6 +26,6 @@ npx vercel --prod
 
 ## Notes
 - Live screens (Register, Contracts, contract workspace, public contract page) talk to the Sonata API at `NEXT_PUBLIC_API_URL` (default `http://localhost:8080`; run `server/` locally, see `server/README.md`). Set the variable in Vercel to `https://api.sonata.brages.uk`.
-- History is an empty state until the history milestone; everything else is live data from the API.
+- The History tab reads decoded contract events on demand from the network's RPC (last ~7 days, nothing indexed): filter by event type, address and a ledger/time range, then export the loaded page as CSV or JSON.
 - The UI kit loads client-side only, so screens render after mount (`useSonataUI()` returns null during SSR).
 - Tests: `npm test` (vitest, lib layer) · `npm run test:e2e` (Playwright, needs the API + site running).
