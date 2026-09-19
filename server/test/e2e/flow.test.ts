@@ -5,6 +5,8 @@ import { Keypair, TransactionBuilder } from '@stellar/stellar-sdk';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { loadConfig, PASSPHRASES } from '../../src/config.js';
 import { RpcChain } from '../../src/chain/rpc.js';
+import { RpcHistorySource } from '../../src/history/rpc.js';
+import { HistoryService } from '../../src/history/service.js';
 import { MemoryStore } from '../../src/registry/store.js';
 import { Registry } from '../../src/registry/registry.js';
 import { llmsTxt } from '../../src/docs/llms.js';
@@ -27,7 +29,8 @@ const setUp = async () => {
   const keys = await loadAuthKeys(store, {});
   const challenge = { signing: keys.signing, homeDomain: cfg.authHomeDomain, webAuthDomain: '127.0.0.1' };
   const auth = { keys, challenge, verifier: new ChallengeVerifier(challenge) };
-  app = buildApp({ cfg, chain, registry, store, log: pino({ level: 'warn' }), auth });
+  const history = new HistoryService(new RpcHistorySource(cfg), (id) => registry.ready(id));
+  app = buildApp({ cfg, chain, registry, store, log: pino({ level: 'warn' }), auth, history });
   await app.listen({ port: 0, host: '127.0.0.1' });
   base = `http://127.0.0.1:${(app.server.address() as any).port}`;
   const ch = await app.inject({ method: 'POST', url: '/auth/challenge', payload: { address: G, network: 'testnet' } });

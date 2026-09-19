@@ -10,12 +10,9 @@ describe('docs routes', () => {
     const o = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/openapi.json` });
     expect(o.json().openapi).toBe('3.1.0');
   });
-  it('events is 501 not_indexed; unknown contract is 404', async () => {
-    const { app, registerFixture } = await testApp();
+  it('unknown contract is 404', async () => {
+    const { app } = await testApp();
     expect((await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/llms.txt` })).statusCode).toBe(404);
-    await registerFixture();
-    const e = await app.inject({ method: 'GET', url: `/c/${FIXTURE_ID}/events` });
-    expect(e.statusCode).toBe(501); expect(e.json().error).toBe('not_indexed');
   });
   it('GET /c/:id/llms.txt is 409 contract_not_ready while the registration pipeline is still running', async () => {
     const { app, chain, registry } = await testApp();

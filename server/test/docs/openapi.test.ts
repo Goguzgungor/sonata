@@ -17,6 +17,7 @@ describe('openapi', () => {
     expect(doc.paths[`/c/${FIXTURE_ID}/submit`].post).toBeTruthy();
     expect(doc.paths[`/c/${FIXTURE_ID}/status`].get).toBeTruthy();
     expect(doc.paths[`/c/${FIXTURE_ID}/llms.txt`].get).toBeTruthy();
+    expect(doc.paths[`/c/${FIXTURE_ID}/events`].get).toBeTruthy();
   });
   it('embeds the arg schema and shared error envelope', () => {
     const call = doc.paths[`/c/${FIXTURE_ID}/call/add`].post;

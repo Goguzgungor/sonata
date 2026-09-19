@@ -1,0 +1,57 @@
+import { describe, it, expect } from 'vitest';
+import { nativeToScVal, xdr } from '@stellar/stellar-sdk';
+import { HistoryService } from '../../src/history/service.js';
+import { FakeHistorySource } from '../helpers/fakeHistory.js';
+import { loadFixtureWasm, FIXTURE_ID } from '../fixtures/index.js';
+import { parseWasm } from '../../src/spec/model.js';
+
+const G = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+const spec = parseWasm(loadFixtureWasm());   // declares Pinged { prefix_topics: ['pinged'], who: topic_list, n: data, data_format: map }
+const b64 = (v: xdr.ScVal) => v.toXDR('base64');
+const pingedRaw = () => ({
+  id: '0001-1', ledger: 150_000, closedAt: '2026-09-18T16:13:58Z', txHash: 'ab'.repeat(32), inSuccessfulContractCall: true,
+  topic: [xdr.ScVal.scvSymbol('pinged'), nativeToScVal(G, { type: 'address' })].map(b64),
+  value: b64(nativeToScVal({ n: 7 }, { type: { n: ['symbol', 'u32'] } }))
+});
+const RETENTION = { oldestLedger: 1000, latestLedger: 200_000, latestLedgerCloseTime: '2026-09-19T00:00:00.000Z' };
+const ready = async () => ({ model: { id: FIXTURE_ID, network: 'testnet' as const, name: 'KitchenSink', wasmHash: 'h', specLedger: 0, functions: [], types: [], errors: [], events: [] }, spec });
+
+describe('HistoryService', () => {
+  it('decodes a page and post-filters events by address', async () => {
+    const source = new FakeHistorySource();
+    source.pages = [{ events: [pingedRaw()], cursor: 'c1', ...RETENTION }];
+    const svc = new HistoryService(source, ready);
+    const res = await svc.query(FIXTURE_ID, {});
+    expect(res.events).toHaveLength(1);
+    expect(res.events[0]).toMatchObject({ event: 'pinged', topics: ['pinged', G], data: { who: G, n: 7 } });
+    expect(res.page).toMatchObject({ cursor: 'c1', limit: 50, from_ledger: 200_000 - 17_280, to_ledger: 200_000 });
+    expect(res.retention).toMatchObject({ oldest_ledger: 1000, latest_ledger: 200_000, note: 'RPC history covers the last ~7 days' });
+
+    const source2 = new FakeHistorySource();
+    source2.pages = [{ events: [pingedRaw()], cursor: null, ...RETENTION }];
+    const svc2 = new HistoryService(source2, ready);
+    const filtered = await svc2.query(FIXTURE_ID, { address: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H' });
+    expect(filtered.events).toHaveLength(0);
+  });
+
+  it('caches identical queries within the TTL; a different limit misses', async () => {
+    const source = new FakeHistorySource();
+    const empty = { events: [], cursor: null, ...RETENTION };
+    source.pages = [empty, empty];
+    const svc = new HistoryService(source, ready, { ttlMs: 10_000 });
+    await svc.query(FIXTURE_ID, { limit: 10 });
+    await svc.query(FIXTURE_ID, { limit: 10 });
+    expect(source.calls).toHaveLength(1);
+    await svc.query(FIXTURE_ID, { limit: 20 });
+    expect(source.calls).toHaveLength(2);
+  });
+
+  it('clamps the requested range to retention and reports the clamp in page.from_ledger/to_ledger', async () => {
+    const source = new FakeHistorySource();
+    source.pages = [{ events: [], cursor: null, ...RETENTION }];
+    const svc = new HistoryService(source, ready);
+    const res = await svc.query(FIXTURE_ID, { from: '10', to: '50000' });
+    expect(res.page.from_ledger).toBe(1000);   // clamped up to oldestLedger
+    expect(res.page.to_ledger).toBe(50_000);
+  });
+});

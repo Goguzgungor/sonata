@@ -7,7 +7,9 @@ import { llmsTxt } from '../../src/docs/llms.js';
 import { openapi } from '../../src/docs/openapi.js';
 import { loadAuthKeys } from '../../src/auth/keys.js';
 import { ChallengeVerifier } from '../../src/auth/challenge.js';
+import { HistoryService } from '../../src/history/service.js';
 import { FakeChain } from './fakeChain.js';
+import { FakeHistorySource } from './fakeHistory.js';
 import { FIXTURE_ID } from '../fixtures/index.js';
 
 export const OWNER = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
@@ -20,8 +22,10 @@ export async function testApp(envOverrides: NodeJS.ProcessEnv = {}, opts: { rate
   const keys = await loadAuthKeys(store, {});
   const challenge = { signing: keys.signing, homeDomain: cfg.authHomeDomain, webAuthDomain: 'api.sonata.test' };
   const auth = { keys, challenge, verifier: new ChallengeVerifier(challenge) };
-  const app = buildApp({ cfg, chain, registry, store, log: pino({ level: 'silent' }), auth }, opts);
+  const historySource = new FakeHistorySource();
+  const history = new HistoryService(historySource, (id) => registry.ready(id), { ttlMs: 10_000 });
+  const app = buildApp({ cfg, chain, registry, store, log: pino({ level: 'silent' }), auth, history }, opts);
   await app.ready();
   const registerFixture = async () => { await registry.register(FIXTURE_ID, 'testnet', 'KitchenSink', OWNER); await registry.whenIdle(); };
-  return { app, chain, store, registry, cfg, auth, registerFixture };
+  return { app, chain, store, registry, cfg, auth, history, historySource, registerFixture };
 }
