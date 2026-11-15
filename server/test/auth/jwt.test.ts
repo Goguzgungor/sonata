@@ -8,7 +8,9 @@ const G = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
 
 describe('session tokens', () => {
   it('issues a 24h HS256 token and verifies it', async () => {
-    const now = Date.parse('2026-09-18T12:00:00Z');
+    // Not a fixed date: verifyToken checks expiry against the real clock, so a
+    // pinned `now` starts failing 24h later. Whole seconds, as `exp` is.
+    const now = Math.floor(Date.now() / 1000) * 1000;
     const { token, expiresAt } = await issueToken(secret, ISS, G, now);
     expect(expiresAt).toBe(new Date(now + SESSION_TTL_S * 1000).toISOString());
     expect(await verifyToken(secret, ISS, token)).toEqual({ address: G, expiresAt });
